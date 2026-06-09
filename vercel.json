@@ -1,0 +1,53 @@
+{
+  "version": 2,
+  "functions": {
+    "api/index.js": {
+      "includeFiles": ""
+    }
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' *.vercel-scripts.com vercel.live cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' *.googleapis.com cdn.jsdelivr.net; font-src 'self' data: cdn.jsdelivr.net *.vercel.com *.gstatic.com vercel.live *.vercel.sh *.public.blob.vercel-storage.com; img-src 'self' data: blob: *.vercel-storage.com; connect-src 'self' *.vercel-storage.com *.sentry.io cdn.jsdelivr.net; worker-src 'self' blob: cdn.jsdelivr.net;"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://code-hunt-3wgp.onrender.com/api/:path*"
+    },
+    {
+      "source": "/auth/:path*",
+      "destination": "https://code-hunt-3wgp.onrender.com/api/auth/:path*"
+    },
+    {
+      "source": "/settings/:path*",
+      "destination": "https://code-hunt-3wgp.onrender.com/api/settings/:path*"
+    },
+    {
+      "source": "/run",
+      "destination": "https://code-hunt-3wgp.onrender.com/api/run"
+    },
+    {
+      "source": "/submit",
+      "destination": "https://code-hunt-3wgp.onrender.com/api/submit"
+    },
+    {
+      "source": "/logs",
+      "destination": "https://code-hunt-3wgp.onrender.com/api/logs"
+    },
+    {
+      "source": "/(login|signup|student|admin|challenge/.*)",
+      "destination": "/public/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/public/$1"
+    }
+  ]
+}
