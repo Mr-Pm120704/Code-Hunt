@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "npm install --prefix frontend && npm run build --prefix frontend && rm -rf public && mv frontend/dist public",
-    "postinstall": "npx prisma generate --schema=backend/prisma/schema.prisma"
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.10.0",
