@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String                @id @default(auto()) @map("_id") @db.ObjectId
+  email               String                @unique
+  password            String
+  name                String
+  role                String                @default("student")
+  createdAt           DateTime              @default(now())
+  submissions         Submission[]
+  distractionSummaries DistractionSummary[]
+}
+
+model Problem {
+  id                  String                @id @default(auto()) @map("_id") @db.ObjectId
+  title               String
+  description         String
+  difficulty          String                @default("Easy")
+  category            String                @default("All")
+  testCases           String
+  functionName        String                @default("solution")
+  starterCode         String                @default("")
+  createdAt           DateTime              @default(now())
+  submissions         Submission[]
+  distractionSummaries DistractionSummary[]
+}
+
+model Submission {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  studentId        String   @db.ObjectId
+  problemId        String   @db.ObjectId
+  code             String
+  output           String
+  passedTestCases  Boolean  @default(false)
+  distractionCount Int      @default(0)
+  timestamp        DateTime @default(now())
+  student          User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  problem          Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
+}
+
+// Lightweight: one row per student per problem session
+model DistractionSummary {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  studentId        String   @db.ObjectId
+  problemId        String   @db.ObjectId
+  hadDistraction   Boolean  @default(false)
+  distractionCount Int      @default(0)
+  lastUpdated      DateTime @default(now()) @updatedAt
+  student          User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  problem          Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, problemId])
+}
+
+// Global site settings — always has one row with id="global"
+model SiteSettings {
+  id            String  @id @map("_id")
+  webcamEnabled Boolean @default(true)
+}
