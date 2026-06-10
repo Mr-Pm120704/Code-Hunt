@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 
 const StudentLogin = lazy(() => import('./pages/StudentLogin'));
 const AdminLogin = lazy(() => import('./pages/AdminLogin'));
@@ -75,6 +76,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
+      <Analytics />
     </BrowserRouter>
   );
 
