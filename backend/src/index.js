@@ -59,11 +59,10 @@ app.get('/api/health', (req, res) => {
 app.get('/api/diag', async (req, res) => {
   let dbStatus = 'testing';
   try {
-    const { PrismaClient } = require('@prisma/client');
-    const p = new PrismaClient();
-    await p.$connect();
+    const prisma = require('./lib/prisma');
+    await prisma.$connect();
     dbStatus = 'connected';
-    await p.$disconnect();
+    await prisma.$disconnect();
   } catch (e) {
     dbStatus = `error: ${e.message}`;
   }

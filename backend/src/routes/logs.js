@@ -1,9 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
-const { authenticateToken } = require('../middleware/auth');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
+const { verifyAdmin } = require('../middleware/auth');
 
 // POST /api/logs — upsert distraction summary (lightweight, one row per student+problem)
 router.post('/', authenticateToken, async (req, res) => {
