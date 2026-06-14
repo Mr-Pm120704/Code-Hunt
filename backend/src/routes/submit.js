@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const prisma = require('../lib/prisma');
+const prisma = require('../utils/prisma');
 const { authenticateToken } = require('../middleware/auth');
 const { runCode } = require('../utils/executor');
 
@@ -21,6 +21,7 @@ router.post('/', authenticateToken, async (req, res) => {
     const results = await runCode(code, testCases, problem.functionName, language);
     const allPassed = results.every((r) => r.passed);
     const passedCount = results.filter((r) => r.passed).length;
+    const totalCount = testCases.length;
 
     const submission = await prisma.submission.create({
       data: {
@@ -29,6 +30,8 @@ router.post('/', authenticateToken, async (req, res) => {
         code,
         output: JSON.stringify(results),
         passedTestCases: allPassed,
+        passedCount,
+        totalCount,
         distractionCount: distractionCount || 0,
       },
     });
@@ -37,7 +40,7 @@ router.post('/', authenticateToken, async (req, res) => {
       submission,
       results,
       allPassed,
-      summary: `${passedCount}/${testCases.length} test cases passed`,
+      summary: { passed: passedCount, total: totalCount },
     });
   } catch (err) {
     console.error('Submit error:', err);

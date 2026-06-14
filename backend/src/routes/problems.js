@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const prisma = require('../lib/prisma');
+const prisma = require('../utils/prisma');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
 // GET /api/problems — list all problems (student + admin)

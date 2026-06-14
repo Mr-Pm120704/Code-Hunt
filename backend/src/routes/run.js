@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const prisma = require('../lib/prisma');
+const prisma = require('../utils/prisma');
 const { authenticateToken } = require('../middleware/auth');
 const { runCode } = require('../utils/executor');
+
+
 
 // POST /api/run — execute code against all test cases (no DB write)
 router.post('/', authenticateToken, async (req, res) => {
@@ -31,7 +33,7 @@ router.post('/', authenticateToken, async (req, res) => {
     res.json({
       results,
       allPassed: passedCount === testCases.length,
-      summary: `${passedCount}/${testCases.length} test cases passed`,
+      summary: { passed: passedCount, total: testCases.length },
     });
   } catch (err) {
     console.error('Run error:', err);

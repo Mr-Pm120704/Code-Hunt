@@ -12,10 +12,22 @@ export function useObjectDetection(videoRef, canvasRef, enabled) {
     let cancelled = false;
     async function load() {
       if (!enabled) return;
+
+      // Ensure a backend is ready — prefer WebGL, fall back to CPU
       try {
+        const ok = await tf.setBackend('webgl');
+        if (!ok) throw new Error('webgl returned false');
         await tf.ready();
+      } catch (_) {
+        // WebGL unavailable — silently fall back to CPU
+        await tf.setBackend('cpu');
+        await tf.ready();
+      }
+      console.info('TensorFlow.js using backend:', tf.getBackend());
+
+      try {
         modelRef.current = await cocoSsd.load();
-        if (!cancelled) console.log('COCO-SSD loaded');
+        if (!cancelled) console.log('COCO-SSD model loaded');
       } catch (err) {
         console.error('COCO-SSD load error', err);
       }

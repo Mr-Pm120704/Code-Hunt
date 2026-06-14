@@ -6,27 +6,58 @@ export function useFaceMonitor({ onDistraction, getCode, problemId }) {
   const currentDir = useRef(null);
   const timerActive = useRef(false);
   const startTimeRef = useRef(Date.now());
-  const GRACE_PERIOD_MS = 10000;
+  
+  // ASYMMETRIC STRICT MONITORING
+  // LEFT: Allowed (reading problems)
+  // DOWN: Allowed (checking own notes)
+  // RIGHT: Strict monitoring (looking at someone else)
+  // UP: Strict monitoring (looking at wall/materials)
+  const MONITORING_STRATEGY = {
+    // ===== CRITICAL: Forbidden External Materials =====
+    FORBIDDEN_OBJECTS: ["cell phone", "laptop", "tablet", "book", "remote"],
+    OBJECT_CONFIDENCE_THRESHOLD: 0.40,
+    
+    // ===== CRITICAL: Collaboration =====
+    ALLOW_MULTIPLE_FACES: false,
+    
+    // ===== ASYMMETRIC THRESHOLDS =====
+    // RIGHT: Strict - flag any significant right turn
+    RIGHT_YAW_THRESHOLD: -0.25,      // Even small right turn (< 30°) flags
+    
+    // UP: Strict - flag any upward tilt
+    UP_PITCH_THRESHOLD: -0.15,       // Even small up tilt flags
+    
+    // LEFT: NOT MONITORED - allow any left turn (reading problems)
+    // DOWN: NOT MONITORED - allow any downward pitch (checking notes)
+    
+    // ===== TIMING =====
+    WARM_UP_PERIOD_MS: 15000,        // First 15s: lenient
+    SUSTAINED_VIOLATION_MS: 3000,    // 3s of violation = flag
+  };
 
   const processDetection = useCallback(
     (results, objects = []) => {
-      if (Date.now() - startTimeRef.current < GRACE_PERIOD_MS) return;
-
+      const now = Date.now();
+      const timeSinceStart = now - startTimeRef.current;
+      
       let direction = null;
 
-      // 1. Objects
-      const forbidden = ["cell phone", "laptop", "tablet", "book", "remote"];
+      // ===== PRIORITY 1: External Cheating Devices =====
+      // Phone, tablet, laptop screens being read
       const foundForbidden = objects.find(
-        obj => forbidden.includes(obj.class) && obj.score > 0.5
+        obj => MONITORING_STRATEGY.FORBIDDEN_OBJECTS.includes(obj.class) && 
+               obj.score > MONITORING_STRATEGY.OBJECT_CONFIDENCE_THRESHOLD
       );
       if (foundForbidden) {
         direction = `object-${foundForbidden.class.replace(' ', '-')}`;
       }
-      // 2. Multiple Faces
+      
+      // ===== PRIORITY 2: Collaboration =====
       else if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 1) {
         direction = 'multiple-faces';
-      } 
-      // 3. Robust Face Orientation
+      }
+      
+      // ===== PRIORITY 3: Face Position =====
       else if (results.multiFaceLandmarks && results.multiFaceLandmarks.length === 1) {
         const landmarks = results.multiFaceLandmarks[0];
         const nose = landmarks[1];
@@ -43,21 +74,51 @@ export function useFaceMonitor({ onDistraction, getCode, problemId }) {
         const yaw = (nose.x - eyesMidX) / faceWidth;
         const pitch = (nose.y - eyesMidY) / faceHeight;
 
-        if (yaw < -0.22) direction = 'right';
-        else if (yaw > 0.22) direction = 'left';
-        else if (pitch < -0.08) direction = 'up';
-      } else {
+        // ===== DURING WARM-UP: Almost no head position flags =====
+        if (timeSinceStart < MONITORING_STRATEGY.WARM_UP_PERIOD_MS) {
+          // Only flag if EXTREMELY turned away (almost impossible to do by accident)
+          if (Math.abs(yaw) >= MONITORING_STRATEGY.EXTREME_YAW_LEFT ||
+              pitch >= MONITORING_STRATEGY.EXTREME_PITCH_DOWN ||
+              pitch <= MONITORING_STRATEGY.EXTREME_PITCH_UP) {
+            direction = 'extreme-position-warmup';
+          }
+        }
+        // ===== AFTER WARM-UP: Allow normal note-checking =====
+        else {
+          // Check if extremely turned (not normal note-checking)
+          if (yaw >= MONITORING_STRATEGY.EXTREME_YAW_LEFT) {
+            direction = 'extreme-left';  // Looking almost behind you
+          }
+          else if (yaw <= MONITORING_STRATEGY.EXTREME_YAW_RIGHT) {
+            direction = 'extreme-right';  // Looking almost behind you
+          }
+          else if (pitch >= MONITORING_STRATEGY.EXTREME_PITCH_DOWN) {
+            direction = 'extreme-down';  // Looking at legs/floor
+          }
+          else if (pitch <= MONITORING_STRATEGY.EXTREME_PITCH_UP) {
+            direction = 'extreme-up';  // Looking at ceiling
+          }
+          // Normal range - student might be checking notes (allowed)
+          else {
+            direction = 'normal-range';  // Looking at screen or notes (both OK)
+          }
+        }
+      } 
+      // ===== Face completely hidden =====
+      else {
         direction = 'away';
       }
 
-      const now = Date.now();
-      if (direction === null) {
+      // ===== DECISION LOGIC =====
+      if (direction === null || direction === 'normal-range') {
+        // Back to normal or always in normal range - reset
         distractionStart.current = null;
         currentDir.current = null;
         timerActive.current = false;
         return;
       }
 
+      // New direction detected or continuing same suspicious direction
       if (!timerActive.current || direction !== currentDir.current) {
         distractionStart.current = now;
         currentDir.current = direction;
@@ -66,7 +127,29 @@ export function useFaceMonitor({ onDistraction, getCode, problemId }) {
       }
 
       const elapsed = now - distractionStart.current;
-      if (elapsed >= 2500) {
+
+      // ===== FLAGGING RULES (Only flag REAL malpractice) =====
+      let shouldFlag = false;
+
+      // RULE 1: External devices (phone, tablet) = IMMEDIATE FLAG
+      if (direction.startsWith('object-')) {
+        shouldFlag = elapsed >= 300;
+      }
+      // RULE 2: Multiple faces = IMMEDIATE FLAG
+      else if (direction === 'multiple-faces') {
+        shouldFlag = elapsed >= 300;
+      }
+      // RULE 3: Face completely hidden = IMMEDIATE FLAG
+      else if (direction === 'away') {
+        shouldFlag = elapsed >= 2000;
+      }
+      // RULE 4: Extremely turned away = Flag if sustained
+      else if (direction.startsWith('extreme')) {
+        // Only flag if sustained for way too long
+        shouldFlag = elapsed >= MONITORING_STRATEGY.SUSTAINED_ANOMALY_MS;  // 10 seconds
+      }
+
+      if (shouldFlag) {
         const startTime = new Date(distractionStart.current).toISOString();
         const endTime = new Date(now).toISOString();
         const snapshot = getCode ? getCode() : '';

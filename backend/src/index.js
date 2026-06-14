@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const fs = require('fs');
 
 const authRoutes = require('./routes/auth');
@@ -10,6 +11,7 @@ const submitRoutes = require('./routes/submit');
 const logRoutes = require('./routes/logs');
 const adminRoutes = require('./routes/admin');
 const settingsRoutes = require('./routes/settings');
+const contestRoutes = require('./routes/contests');
 
 const path = require('path');
 
@@ -17,6 +19,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
+app.use(compression()); // gzip all responses — reduces bandwidth under concurrent load
 app.use(cors({ origin: '*', credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 
@@ -36,6 +39,7 @@ app.use(['/api/submit', '/submit'], submitRoutes);
 app.use(['/api/logs', '/logs'], logRoutes);
 app.use(['/api/admin', '/admin'], adminRoutes);
 app.use(['/api/settings', '/settings'], settingsRoutes);
+app.use(['/api/contests', '/contests'], contestRoutes);
 
 // SPA Catch-all: If it's not an API call, serve the index.html
 app.get('*', (req, res, next) => {
@@ -59,10 +63,11 @@ app.get('/api/health', (req, res) => {
 app.get('/api/diag', async (req, res) => {
   let dbStatus = 'testing';
   try {
-    const prisma = require('./lib/prisma');
-    await prisma.$connect();
+    const { PrismaClient } = require('@prisma/client');
+    const p = new PrismaClient();
+    await p.$connect();
     dbStatus = 'connected';
-    await prisma.$disconnect();
+    await p.$disconnect();
   } catch (e) {
     dbStatus = `error: ${e.message}`;
   }

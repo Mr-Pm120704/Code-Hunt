@@ -2,12 +2,14 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const prisma = require('../lib/prisma');
+const prisma = require('../utils/prisma');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-dev-only';
 
 // Log env check on startup
 console.log('[auth] DATABASE_URL present:', !!process.env.DATABASE_URL);
+
+
 
 // POST /api/auth/signup
 router.post('/signup', async (req, res) => {

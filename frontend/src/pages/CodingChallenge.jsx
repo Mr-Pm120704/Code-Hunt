@@ -27,8 +27,12 @@ export default function CodingChallenge() {
   const [showBanner, setShowBanner] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [isDisqualified, setIsDisqualified] = useState(false);
+  const [leaveCount, setLeaveCount] = useState(0);
+  const [overlayVisible, setOverlayVisible] = useState(false);
   const [language, setLanguage] = useState('java');
   const [webcamEnabled, setWebcamEnabled] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [cameraError, setCameraError] = useState(null);
   const codeRef = useRef(code);
   const getCode = useCallback(() => codeRef.current, []);
 
@@ -72,58 +76,109 @@ export default function CodingChallenge() {
     return () => clearTimeout(timer);
   }, [id, navigate, addToast]);
 
-  // fullscreen / multi‑tab detection
+  // fullscreen / multi-tab detection
   useEffect(() => {
-    if (!hasStarted) return;
+    if (!hasStarted || submitted) return;
+
+    const handleHidden = () => {
+      if (isDisqualified || submitted) return;
+      // Log the event
+      api.post('/logs', { problemId: id }).catch(() => {});
+
+      setLeaveCount((prev) => {
+        const next = prev + 1;
+        if (next === 1) {
+          setOverlayVisible(true);
+          addToast('⚠️ You left the exam window. You may rejoin once.');
+        } else {
+          setIsDisqualified(true);
+          addToast('❌ Multiple window switches detected — session terminated.', 'error');
+          setTimeout(() => {
+            alert('SECURITY VIOLATION: Multiple tab/window switches detected. Your session has been terminated.');
+            localStorage.clear();
+            window.location.href = '/login';
+          }, 800);
+        }
+        return next;
+      });
+    };
 
     const handleVisibility = () => {
-      if (document.visibilityState === 'hidden' && !isDisqualified) {
-        setIsDisqualified(true);
-        // Only send problemId — no code snapshot
-        api.post('/logs', { problemId: id }).catch(() => {});
-        alert("CRITICAL SECURITY VIOLATION: Multi-tab/Window switching detected. Your session has been terminated.");
-        localStorage.clear();
-        window.location.href = '/login';
+      if (document.visibilityState === 'hidden') handleHidden();
+      else if (document.visibilityState === 'visible') {
+        if (overlayVisible) {
+          setOverlayVisible(false);
+          addToast('You have rejoined the exam. Continue.');
+        }
       }
     };
 
+    const handleBlur = () => {
+      // window.blur often accompanies tab change; treat same as hidden
+      handleHidden();
+    };
+
     document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('blur', handleVisibility);
+    window.addEventListener('blur', handleBlur);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('blur', handleVisibility);
+      window.removeEventListener('blur', handleBlur);
     };
-  }, [hasStarted, id, isDisqualified]);
+  }, [hasStarted, id, isDisqualified, submitted, overlayVisible, addToast]);
 
-  // copy/paste/right‑click security – now addToast exists
+  // copy/paste/right-click security
   useEffect(() => {
-    if (!hasStarted || isDisqualified) return;
+    if (!hasStarted || isDisqualified || submitted) return;
 
-    const handleSecurityViolation = (e) => {
+    const onCopy = (e) => {
       e.preventDefault();
       setDistractionCount(prev => prev + 1);
-      addToast("⚠️ Security Violation: Unauthorized action detected!", "error");
-      setIsDisqualified(true);
-      // Only send problemId — no code snapshot
+      addToast(`⚠️ Forbidden action: Copy`, 'warn');
       api.post('/logs', { problemId: id }).catch(() => {});
-      setTimeout(() => {
-        alert("SECURITY VIOLATION: Copy, Paste, and Right-click are strictly prohibited. Your session has been terminated and this incident has been logged.");
-        localStorage.clear();
-        window.location.href = '/';
-      }, 1000);
     };
 
-    document.addEventListener('copy', handleSecurityViolation);
-    document.addEventListener('paste', handleSecurityViolation);
-    document.addEventListener('contextmenu', handleSecurityViolation);
+    const onPaste = (e) => {
+      e.preventDefault();
+      setDistractionCount(prev => prev + 1);
+      addToast(`⚠️ Forbidden action: Paste`, 'warn');
+      api.post('/logs', { problemId: id }).catch(() => {});
+    };
+
+    const onContext = (e) => {
+      // RIGHT-CLICK: Block but DO NOT count as distraction
+      e.preventDefault();
+      // Silently blocked - no toast, no distraction count
+    };
+
+    document.addEventListener('copy', onCopy);
+    document.addEventListener('paste', onPaste);
+    document.addEventListener('contextmenu', onContext);
 
     return () => {
-      document.removeEventListener('copy', handleSecurityViolation);
-      document.removeEventListener('paste', handleSecurityViolation);
-      document.removeEventListener('contextmenu', handleSecurityViolation);
+      document.removeEventListener('copy', onCopy);
+      document.removeEventListener('paste', onPaste);
+      document.removeEventListener('contextmenu', onContext);
     };
-  }, [hasStarted, id, isDisqualified, addToast]);
+  }, [hasStarted, id, isDisqualified, submitted, addToast]);
+
+  // keyboard shortcuts (Ctrl/Cmd + C/V/A/Z) — disable and warn
+  useEffect(() => {
+    if (!hasStarted || isDisqualified || submitted) return;
+
+    const onKeyDown = (e) => {
+      const key = (e.key || '').toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && ['c', 'v', 'a', 'z'].includes(key)) {
+        e.preventDefault();
+        setDistractionCount(prev => prev + 1);
+        addToast('⚠️ Keyboard shortcuts like copy/paste/select/undo are disabled during the exam.', 'warn');
+        api.post('/logs', { problemId: id }).catch(() => {});
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [hasStarted, isDisqualified, submitted, addToast, id]);
 
   const startChallenge = () => {
     if (document.documentElement.requestFullscreen) {
@@ -162,13 +217,16 @@ export default function CodingChallenge() {
     setDistractionCount((prev) => {
       const next = prev + 1;
       let label;
-      if (direction === 'away') label = 'Face not detected';
-      else if (direction === 'talking') label = 'Voice/Talking detected';
-      else if (direction === 'suspicious-pose') label = 'Suspicious head movement';
-      else if (direction.startsWith('object-')) label = `Forbidden object: ${direction.replace('object-', '').replace('-', ' ')}`;
-      else if (direction === 'multiple-faces') label = 'Multiple faces detected!';
-      else label = `Looking ${direction}`;
-      addToast(`⚠️ ${label}`, 'warn');
+      if (direction === 'away') label = '❌ Face not detected';
+      else if (direction === 'extreme-left' || direction === 'extreme-right') 
+        label = '⚠️ Head turned too far - looking behind you';
+      else if (direction === 'extreme-down') label = '🚨 Looking down - checking external materials?';
+      else if (direction === 'extreme-up') label = '⚠️ Looking up - checking wall/ceiling?';
+      else if (direction === 'extreme-position-warmup') label = '⚠️ Extreme head position detected';
+      else if (direction.startsWith('object-')) label = `🚫 CHEATING: ${direction.replace('object-', '').replace('-', ' ')} detected!`;
+      else if (direction === 'multiple-faces') label = '👥 CHEATING: Multiple people in frame!';
+      else label = `⚠️ Violation: ${direction}`;
+      addToast(label, 'warn');
       // Lightweight log — only problemId, no code snapshot
       api.post('/logs', { problemId: id }).catch(() => {});
       if (next >= 10) {
@@ -203,7 +261,14 @@ export default function CodingChallenge() {
       setSubmitResult(data);
       setSubmitted(true);
       stop();
-      addToast('Submitted successfully!', 'success');
+      addToast(
+        data.allPassed
+          ? `✅ Submitted! ${data.summary?.passed ?? 0}/${data.summary?.total ?? 0} test cases passed.`
+          : `⚠️ Submitted. Only ${data.summary?.passed ?? 0}/${data.summary?.total ?? 0} test cases passed.`,
+        data.allPassed ? 'success' : 'warn'
+      );
+      // Navigate back to dashboard after 2s so solved count refreshes
+      setTimeout(() => navigate('/student'), 2000);
     } catch (err) {
       addToast('Submission failed.', 'error');
     } finally {
@@ -238,15 +303,63 @@ export default function CodingChallenge() {
             </p>
             <button
               onClick={startChallenge}
-              className="lc-btn-primary w-full py-4 text-lg font-bold shadow-[0_0_20px_rgba(255,161,22,0.3)]"
+              disabled={webcamEnabled && !cameraReady}
+              className="lc-btn-primary w-full py-4 text-lg font-bold shadow-[0_0_20px_rgba(255,161,22,0.3)] disabled:opacity-50"
             >
-              Enter Exam Arena
+              {webcamEnabled && !cameraReady ? 'Enable Camera to Enter' : 'Enter Exam Arena'}
             </button>
           </div>
         </div>
       )}
 
+      {webcamEnabled && !cameraReady && (
+        <div className="fixed inset-0 z-[20000] bg-background/95 backdrop-blur flex items-center justify-center p-6 text-center">
+          <div className="max-w-xl w-full lc-card p-10 border-2 border-red-500 bg-surface shadow-xl">
+            <h2 className="text-3xl font-black text-foreground mb-4">Camera Required</h2>
+            <p className="text-muted text-sm mb-6 leading-relaxed">
+              This exam requires your webcam to be enabled. Please allow camera access in your browser and refresh the page.
+            </p>
+            {cameraError ? (
+              <p className="text-sm text-red-500 mb-6">{cameraError}</p>
+            ) : (
+              <p className="text-sm text-gray-500 mb-6">Waiting for camera permission...</p>
+            )}
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={() => window.location.reload()}
+                className="lc-btn-secondary px-5 py-3 rounded font-bold"
+              >
+                Retry Camera Access
+              </button>
+              <button
+                onClick={() => navigate('/student')}
+                className="px-5 py-3 rounded font-bold bg-red-600 text-white hover:bg-red-500 transition-colors"
+              >
+                Return to Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showBanner && <DistractionBanner count={distractionCount} />}
+
+      {overlayVisible && (
+        <div className="fixed inset-0 z-[30000] bg-black/60 flex items-center justify-center p-6">
+          <div className="max-w-md w-full lc-card p-8 border-border bg-surface text-center">
+            <h3 className="text-lg font-bold mb-3">You left the exam window</h3>
+            <p className="text-sm text-muted mb-6">You may rejoin once. Click <strong>Rejoin</strong> to continue. Further tab/window switches will terminate your session.</p>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => { setOverlayVisible(false); addToast('Rejoined exam.'); }}
+                className="lc-btn-primary px-6 py-2"
+              >
+                Rejoin
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Navbar */}
       <div className="lc-navbar shrink-0 justify-between px-4 md:px-6 bg-surface border-b border-border">
@@ -335,12 +448,28 @@ export default function CodingChallenge() {
             <CodeEditor value={code} onChange={setCode} language={language} />
           </div>
 
-          {/* Bottom Panel (optional console output) */}
+          {/* Bottom Panel — Console output */}
           {testResults && (
-            <div className="h-[30%] bg-surface rounded-lg border border-border p-4 overflow-y-auto">
-              <h3 className="text-xs font-bold text-muted uppercase mb-3">Console</h3>
-              <div className="font-mono text-xs text-foreground space-y-1">
-                {testResults.results[0]?.logs.map((log, i) => <div key={i}>{log}</div>)}
+            <div className="h-[30%] bg-[#0d1117] rounded-lg border border-border p-4 overflow-y-auto font-mono text-xs">
+              <h3 className="text-[10px] font-bold text-muted uppercase mb-3 tracking-wider">Console Output</h3>
+              <div className="space-y-3">
+                {testResults.results.map((res, idx) => (
+                  <div key={idx}>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${res.passed ? 'text-green-400' : 'text-red-400'}`}>
+                      {'▶ Test Case #'}{idx + 1} {res.passed ? '✓' : '✗'}
+                    </span>
+                    {res.actual ? (
+                      <pre className={`mt-1 whitespace-pre-wrap break-all leading-relaxed ${res.error ? 'text-red-300' : 'text-green-300'}`}>
+                        {res.actual}
+                      </pre>
+                    ) : (
+                      <p className="text-muted italic mt-1">(no output)</p>
+                    )}
+                    {res.time != null && (
+                      <p className="text-[9px] text-muted mt-0.5">Exec: {Math.round(res.time)}ms</p>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -353,6 +482,10 @@ export default function CodingChallenge() {
           onDistraction={handleDistraction}
           getCode={getCode}
           problemId={id}
+          onCameraStatusChange={(ready, error) => {
+            setCameraReady(ready);
+            setCameraError(error);
+          }}
         />
       )}
       <Toast toasts={toasts} />
