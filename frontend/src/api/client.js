@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://code-hunt-qwqf.onrender.com/api',
+  baseURL: 'https://code-hunt-aiml.vercel.app',
   headers: { 'Content-Type': 'application/json' },
 });
 
