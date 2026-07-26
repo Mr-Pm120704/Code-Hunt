@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/client';
 
-export default function AdminProblemForm({ problem, onClose, onSaved }) {
+export default function AdminProblemForm({ problem, onClose, onSaved, year, onChangeYear }) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     difficulty: 'Easy',
     category: 'All',
+    year: year || '1st Year',
     functionName: 'Main',
     starterCode: '',
     points: 100,
@@ -21,13 +22,14 @@ export default function AdminProblemForm({ problem, onClose, onSaved }) {
         description: problem.description,
         difficulty: problem.difficulty,
         category: problem.category || 'All',
+        year: problem.year || year || '1st Year',
         functionName: problem.functionName || 'Main',
         starterCode: problem.starterCode || '',
         points: problem.points || 100,
         testCases: problem.testCases || [{ input: '', output: '' }]
       });
     }
-  }, [problem]);
+  }, [problem, year]);
 
   const addTestCase = () => {
     setFormData(prev => ({
@@ -95,20 +97,22 @@ export default function AdminProblemForm({ problem, onClose, onSaved }) {
       const descMatch = text.match(/Description:\s*([\s\S]*?)(?=Starter Code:|Test Cases:|Input:|$)/i);
       if (descMatch) newFormData.description = descMatch[1].trim();
       else if (!titleMatch && !difficultyMatch && !categoryMatch) {
-         newFormData.description = text; // Fallback: just put all text in description if no headers found
+         newFormData.description = text;
       }
 
       const starterMatch = text.match(/Starter Code:\s*([\s\S]*?)(?=Test Cases:|Input:|$)/i);
       if (starterMatch) newFormData.starterCode = starterMatch[1].trim();
 
       const testCases = [];
+      const normalizedText = text.replace(/\r\n/g, '\n');
       const tcRegex = /Input:\s*([\s\S]*?)Output:\s*([\s\S]*?)(?=Input:|$)/gi;
       let match;
-      while ((match = tcRegex.exec(text)) !== null) {
-        testCases.push({
-          input: match[1].trim(),
-          output: match[2].trim()
-        });
+      while ((match = tcRegex.exec(normalizedText)) !== null) {
+        const input = match[1].trim();
+        const output = match[2].trim();
+        if (input || output) {
+          testCases.push({ input, output });
+        }
       }
       
       if (testCases.length > 0) {
@@ -118,14 +122,28 @@ export default function AdminProblemForm({ problem, onClose, onSaved }) {
       setFormData(newFormData);
     };
     reader.readAsText(file);
-    e.target.value = null; // reset input
+    e.target.value = null;
   };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
       <div className="lc-card w-full max-w-2xl max-h-[90vh] overflow-y-auto p-8 animate-fade-in bg-white">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-[var(--text-main)]">{problem ? 'Edit Problem' : 'Create New Problem'}</h2>
+          <div>
+            <h2 className="text-2xl font-bold text-[var(--text-main)]">{problem ? 'Edit Problem' : 'Create New Problem'}</h2>
+            <p className="text-sm text-[var(--text-muted)] mt-1 flex items-center gap-2">
+              Year: <span className="font-bold text-[#ffa116]">{formData.year}</span>
+              {!problem && onChangeYear && (
+                <button
+                  type="button"
+                  onClick={onChangeYear}
+                  className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#45A29E]/10 text-[#45A29E] hover:bg-[#45A29E]/20 transition-colors"
+                >
+                  Change
+                </button>
+              )}
+            </p>
+          </div>
           <div className="flex items-center gap-4">
             <label className="cursor-pointer text-sm font-medium text-[#45A29E] bg-[#45A29E]/10 hover:bg-[#45A29E]/20 px-4 py-2 rounded transition-colors flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">

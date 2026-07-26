@@ -6,6 +6,7 @@ import AdminProblemForm from '../components/AdminProblemForm';
 import AdminContestForm from '../components/AdminContestForm';
 import StudentLogsModal from '../components/StudentLogsModal';
 import Leaderboard from '../components/Leaderboard';
+import WebcamControl from '../components/WebcamControl';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -21,8 +22,10 @@ export default function AdminDashboard() {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedLeaderboardContest, setSelectedLeaderboardContest] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [webcamEnabled, setWebcamEnabled] = useState(true);
-  const [webcamToggling, setWebcamToggling] = useState(false);
+  const [showYearSelect, setShowYearSelect] = useState(false);
+  const [selectedYear, setSelectedYear] = useState(null);
+  const [lastUsedYear, setLastUsedYear] = useState(null);
+  const [problemYearFilter, setProblemYearFilter] = useState('All');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -31,14 +34,12 @@ export default function AdminDashboard() {
       const results = await Promise.allSettled([
         api.get(`/problems?t=${Date.now()}`),
         api.get(`/admin/students?t=${Date.now()}`),
-        api.get(`/admin/settings?t=${Date.now()}`),
         api.get(`/contests?t=${Date.now()}`),
       ]);
 
       if (results[0].status === 'fulfilled') setProblems(results[0].value.data);
       if (results[1].status === 'fulfilled') setStudents(results[1].value.data);
-      if (results[2].status === 'fulfilled') setWebcamEnabled(results[2].value.data.webcamEnabled);
-      if (results[3].status === 'fulfilled') setContests(results[3].value.data);
+      if (results[2].status === 'fulfilled') setContests(results[2].value.data);
 
     } catch (e) {
       console.error("Fetch error:", e);
@@ -67,27 +68,6 @@ export default function AdminDashboard() {
       await api.delete(`/admin/contests/${id}`);
       setContests((prev) => prev.filter((c) => c.id !== id));
     } catch { alert('Failed to delete contest.'); }
-  };
-
-  const toggleWebcam = async () => {
-    if (webcamToggling) return;
-    const nextState = !webcamEnabled;
-    
-    setWebcamToggling(true);
-    // Optimistic update
-    setWebcamEnabled(nextState);
-    
-    try {
-      const res = await api.post('/admin/settings/webcam', { webcamEnabled: nextState });
-      // Sync with server response
-      setWebcamEnabled(res.data.webcamEnabled);
-    } catch (err) {
-      // Rollback on error
-      setWebcamEnabled(!nextState);
-      alert('Failed to update webcam setting: ' + (err.response?.data?.error || err.message));
-    } finally {
-      setWebcamToggling(false);
-    }
   };
 
   const logout = () => { localStorage.clear(); navigate('/login'); };
@@ -134,28 +114,6 @@ export default function AdminDashboard() {
           <p className="text-muted">Manage problems and monitor student activity.</p>
         </div>
 
-        {/* ── Webcam Control Card ── */}
-        <div className={`lc-card p-5 mb-8 flex items-center justify-between border ${webcamEnabled ? 'border-green-500/30 bg-green-500/5' : 'border-red-500/30 bg-red-500/5'}`}>
-          <div className="flex items-center gap-4">
-            <span className="text-3xl">{webcamEnabled ? '📷' : '🚫'}</span>
-            <div>
-              <p className="font-bold text-foreground text-lg">Webcam Monitoring</p>
-              <p className="text-sm text-muted">
-                {webcamEnabled
-                  ? 'Webcam is ON — students must use the camera during exams.'
-                  : 'Webcam is OFF — students can take exams without a camera.'}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={toggleWebcam}
-            disabled={webcamToggling}
-            className={`relative inline-flex items-center h-8 w-16 rounded-full transition-all duration-300 focus:outline-none disabled:opacity-60 ${webcamEnabled ? 'bg-green-500' : 'bg-red-500/60'}`}
-          >
-            <span className={`inline-block w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${webcamEnabled ? 'translate-x-9' : 'translate-x-1'}`} />
-          </button>
-        </div>
-
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           {[
@@ -176,13 +134,13 @@ export default function AdminDashboard() {
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
-          {['problems', 'contests', 'students', 'leaderboard'].map((tab) => (
+          {['problems', 'contests', 'students', 'webcam', 'leaderboard'].map((tab) => (
             <button key={tab} id={`tab-${tab}`} onClick={() => setActiveTab(tab)}
               className={`px-5 py-2 rounded-lg text-sm font-medium capitalize transition-all border ${activeTab === tab
                 ? 'bg-brand/10 text-brand border-brand/30'
                 : 'bg-surface text-muted border-border hover:bg-background'
               }`}>
-              {tab === 'problems' ? '📝 Problems' : tab === 'contests' ? '🏆 Contests' : tab === 'students' ? '👥 Students' : '🏅 Leaderboard'}
+              {tab === 'problems' ? '📝 Problems' : tab === 'contests' ? '🏆 Contests' : tab === 'students' ? '👥 Students' : tab === 'webcam' ? '📷 Webcam Control' : '🏅 Leaderboard'}
             </button>
           ))}
         </div>
@@ -192,20 +150,43 @@ export default function AdminDashboard() {
           <div>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold text-foreground">Coding Problems</h2>
-              <button id="add-problem-btn" onClick={() => { setEditingProblem(null); setShowForm(true); }}
-                className="lc-btn-primary px-4 py-2 text-sm !py-2">
-                + Add Problem
-              </button>
+              <div className="flex items-center gap-3">
+                <select
+                  value={problemYearFilter}
+                  onChange={(e) => setProblemYearFilter(e.target.value)}
+                  className="lc-input bg-input border-border text-foreground text-sm !py-2 w-40"
+                >
+                  <option value="All">All Years</option>
+                  <option value="1st Year">1st Year</option>
+                  <option value="2nd Year">2nd Year</option>
+                  <option value="3rd Year">3rd Year</option>
+                </select>
+                <button id="add-problem-btn" onClick={() => {
+                  setEditingProblem(null);
+                  if (lastUsedYear) {
+                    setSelectedYear(lastUsedYear);
+                    setShowForm(true);
+                  } else {
+                    setShowYearSelect(true);
+                  }
+                }}
+                  className="lc-btn-primary px-4 text-sm !py-2 h-10 whitespace-nowrap">
+                  + Add Problem
+                </button>
+              </div>
             </div>
 
             <div className="bg-surface border-border border rounded-xl overflow-hidden">
-              {problems.map((p) => (
+              {problems
+                .filter((p) => problemYearFilter === 'All' || (p.year || '1st Year') === problemYearFilter)
+                .map((p) => (
                 <div key={p.id} className="p-4 border-b border-border flex items-center justify-between hover:bg-background/50 transition-colors">
                   <div>
                     <p className="text-foreground font-bold mb-1">{p.title}</p>
                     <div className="flex gap-2 items-center">
                       <span className={`badge-${p.difficulty.toLowerCase()}`}>{p.difficulty}</span>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20">{p.category || 'All'}</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500 border border-purple-500/20">{p.year || '1st Year'}</span>
                     </div>
                   </div>
                   <div className="flex gap-4">
@@ -214,8 +195,10 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               ))}
-              {problems.length === 0 && (
-                <div className="p-8 text-center text-muted">No problems created yet.</div>
+              {problems.filter((p) => problemYearFilter === 'All' || (p.year || '1st Year') === problemYearFilter).length === 0 && (
+                <div className="p-8 text-center text-muted">
+                  {problemYearFilter === 'All' ? 'No problems created yet.' : `No problems for ${problemYearFilter}.`}
+                </div>
               )}
             </div>
           </div>
@@ -314,6 +297,11 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* Webcam Control Tab */}
+        {activeTab === 'webcam' && (
+          <WebcamControl />
+        )}
+
         {/* Leaderboard Tab */}
         {activeTab === 'leaderboard' && (
           <div>
@@ -357,12 +345,42 @@ export default function AdminDashboard() {
         )}
       </div>
 
+      {/* Year Selection Modal */}
+      {showYearSelect && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="lc-card w-full max-w-md p-8 animate-fade-in bg-surface border-border">
+            <h2 className="text-2xl font-bold text-foreground mb-2">Select Academic Year</h2>
+            <p className="text-sm text-muted mb-6">Choose which year this problem is for:</p>
+            <div className="space-y-3">
+              {['1st Year', '2nd Year', '3rd Year'].map((y) => (
+                <button
+                  key={y}
+                  onClick={() => { setSelectedYear(y); setLastUsedYear(y); setShowYearSelect(false); setShowForm(true); }}
+                  className="w-full p-4 text-left rounded-lg border border-border hover:border-brand hover:bg-brand/5 transition-all flex items-center justify-between group"
+                >
+                  <span className="font-bold text-foreground group-hover:text-brand">{y}</span>
+                  <span className="text-muted group-hover:text-brand">→</span>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => { setShowYearSelect(false); setSelectedYear(null); }}
+              className="w-full mt-4 py-2 text-sm text-muted hover:text-foreground transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Problem Form Modal */}
       {showForm && (
         <AdminProblemForm
           problem={editingProblem}
-          onClose={() => { setShowForm(false); setEditingProblem(null); }}
-          onSaved={() => { setShowForm(false); setEditingProblem(null); fetchData(); }}
+          year={editingProblem ? undefined : selectedYear}
+          onChangeYear={!editingProblem ? () => { setShowForm(false); setShowYearSelect(true); } : undefined}
+          onClose={() => { setShowForm(false); setEditingProblem(null); setSelectedYear(null); }}
+          onSaved={() => { setShowForm(false); setEditingProblem(null); setSelectedYear(null); fetchData(); }}
         />
       )}
 

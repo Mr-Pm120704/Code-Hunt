@@ -3,7 +3,51 @@ const router = express.Router();
 const prisma = require('../utils/prisma');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
+// GET /api/admin/webcam-users — list all students with webcam status for webcam control
+router.get('/webcam-users', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const students = await prisma.user.findMany({
+      where: { role: 'student' },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        year: true,
+        class: true,
+        webcamEnabled: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(students);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error', details: err.message });
+  }
+});
 
+// POST /api/admin/webcam-toggle/:userId — toggle webcam for a specific student
+router.post('/webcam-toggle/:userId', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { webcamEnabled } = req.body;
+
+    if (typeof webcamEnabled !== 'boolean') {
+      return res.status(400).json({ error: 'webcamEnabled must be a boolean' });
+    }
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { webcamEnabled },
+      select: { id: true, name: true, email: true, year: true, class: true, webcamEnabled: true },
+    });
+
+    res.json(user);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to toggle webcam', details: err.message });
+  }
+});
 
 // GET /api/admin/students — list all students with summary data
 router.get('/students', authenticateToken, requireAdmin, async (req, res) => {
@@ -14,6 +58,9 @@ router.get('/students', authenticateToken, requireAdmin, async (req, res) => {
         id: true,
         name: true,
         email: true,
+        year: true,
+        class: true,
+        webcamEnabled: true,
         createdAt: true,
         submissions: {
           where: { passedTestCases: true },
@@ -54,6 +101,9 @@ router.get('/students', authenticateToken, requireAdmin, async (req, res) => {
         id: s.id,
         name: s.name,
         email: s.email,
+        year: s.year,
+        class: s.class,
+        webcamEnabled: s.webcamEnabled,
         createdAt: s.createdAt,
         solvedProblems: uniqueSolvedProblems,
         solvedCount: uniqueSolvedProblems.length,
@@ -123,42 +173,6 @@ router.get('/student/:id', authenticateToken, requireAdmin, async (req, res) => 
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Internal server error', details: err.message });
-  }
-});
-
-// GET /api/admin/settings — get current site settings
-router.get('/settings', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const settings = await prisma.siteSettings.upsert({
-      where: { id: 'global' },
-      update: {},
-      create: { id: 'global', webcamEnabled: true },
-    });
-    res.json(settings);
-  } catch (err) {
-    console.error('Settings GET error:', err);
-    res.status(500).json({ error: 'Internal server error', details: err.message });
-  }
-});
-
-// POST /api/admin/settings/webcam — toggle webcam on/off
-router.post('/settings/webcam', authenticateToken, requireAdmin, async (req, res) => {
-  try {
-    const { webcamEnabled } = req.body;
-    if (typeof webcamEnabled !== 'boolean') {
-      return res.status(400).json({ error: 'webcamEnabled must be a boolean' });
-    }
-
-    const settings = await prisma.siteSettings.upsert({
-      where: { id: 'global' },
-      update: { webcamEnabled },
-      create: { id: 'global', webcamEnabled },
-    });
-
-    res.json(settings);
-  } catch (err) {
-    console.error('Settings POST error:', err);
     res.status(500).json({ error: 'Internal server error', details: err.message });
   }
 });

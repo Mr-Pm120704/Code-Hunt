@@ -25,6 +25,7 @@ const problems = [
 - Each input has exactly one solution
 - You may not use the same element twice`,
     difficulty: 'Easy',
+    year: '1st Year',
     functionName: 'Main',
     starterCode: `import java.util.*;
 
@@ -68,6 +69,7 @@ class Solution {
 - Output: \`olleh\`
 `,
     difficulty: 'Easy',
+    year: '1st Year',
     functionName: 'Main',
     starterCode: `import java.util.*;
 
@@ -107,6 +109,7 @@ F(0) = 0, F(1) = 1, F(n) = F(n-1) + F(n-2)
 - Output: \`55\`
 `,
     difficulty: 'Medium',
+    year: '2nd Year',
     functionName: 'Main',
     starterCode: `import java.util.*;
 
@@ -166,6 +169,8 @@ async function main() {
       password: studentPassword,
       name: 'Demo Student',
       role: 'student',
+      year: '2nd Year',
+      class: 'B.SC CS',
     },
   });
   console.log('✅ Student created:', student.email);

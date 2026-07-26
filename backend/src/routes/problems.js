@@ -3,10 +3,22 @@ const router = express.Router();
 const prisma = require('../utils/prisma');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
-// GET /api/problems — list all problems (student + admin)
+// Normalize year format: "1" -> "1st Year", "2" -> "2nd Year", "3" -> "3rd Year"
+function normalizeYear(year) {
+  if (!year) return '1st Year';
+  const map = { '1': '1st Year', '2': '2nd Year', '3': '3rd Year' };
+  return map[year] || year;
+}
+
+// GET /api/problems — list problems (admin: all, student: only their year)
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    const isAdmin = req.user.role === 'admin';
+    const studentYear = normalizeYear(req.user.year);
+    const where = isAdmin ? {} : { year: studentYear };
+
     const problems = await prisma.problem.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
       include: {
         submissions: {
@@ -15,14 +27,13 @@ router.get('/', authenticateToken, async (req, res) => {
         },
       },
     });
-    const isAdmin = req.user.role === 'admin';
     const parsed = problems.map((p) => {
       const cases = JSON.parse(p.testCases);
       const isSolved = p.submissions && p.submissions.length > 0;
-      // Remove submissions from payload to save bandwidth
       const { submissions, ...problemData } = p;
       return {
         ...problemData,
+        year: p.year || '1st Year',
         isSolved,
         testCases: isAdmin ? cases : cases.filter(c => !c.hidden),
       };
@@ -34,15 +45,22 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// GET /api/problems/:id — single problem
+// GET /api/problems/:id — single problem (enforce year for students)
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const problem = await prisma.problem.findUnique({ where: { id: req.params.id } });
     if (!problem) return res.status(404).json({ error: 'Problem not found' });
+
+    // Students can only access problems from their year
+    if (req.user.role !== 'admin' && problem.year && problem.year !== normalizeYear(req.user.year)) {
+      return res.status(403).json({ error: 'Access denied: problem not assigned to your year' });
+    }
+
     const isAdmin = req.user.role === 'admin';
     const cases = JSON.parse(problem.testCases);
     res.json({ 
       ...problem, 
+      year: problem.year || '1st Year',
       testCases: isAdmin ? cases : cases.filter(c => !c.hidden) 
     });
   } catch (err) {
@@ -53,9 +71,12 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // POST /api/problems — create (admin only)
 router.post('/', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { title, description, difficulty, category, testCases, functionName } = req.body;
+    const { title, description, difficulty, category, year, testCases, functionName, starterCode, points } = req.body;
     if (!title || !description || !testCases || !Array.isArray(testCases)) {
       return res.status(400).json({ error: 'title, description, testCases[] required' });
+    }
+    if (!year) {
+      return res.status(400).json({ error: 'year is required' });
     }
     const problem = await prisma.problem.create({
       data: {
@@ -63,8 +84,11 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
         description,
         difficulty: difficulty || 'Easy',
         category: category || 'All',
+        year,
         testCases: JSON.stringify(testCases),
         functionName: functionName || 'solution',
+        starterCode: starterCode || '',
+        points: points || 100,
       },
     });
     res.status(201).json({ ...problem, testCases: JSON.parse(problem.testCases) });
@@ -77,14 +101,17 @@ router.post('/', authenticateToken, requireAdmin, async (req, res) => {
 // PUT /api/problems/:id — update (admin only)
 router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { title, description, difficulty, category, testCases, functionName } = req.body;
+    const { title, description, difficulty, category, year, testCases, functionName, starterCode, points } = req.body;
     const data = {};
     if (title) data.title = title;
     if (description) data.description = description;
     if (difficulty) data.difficulty = difficulty;
     if (category) data.category = category;
+    if (year) data.year = year;
     if (testCases) data.testCases = JSON.stringify(testCases);
     if (functionName) data.functionName = functionName;
+    if (starterCode !== undefined) data.starterCode = starterCode;
+    if (points !== undefined) data.points = points;
 
     const problem = await prisma.problem.update({ where: { id: req.params.id }, data });
     res.json({ ...problem, testCases: JSON.parse(problem.testCases) });

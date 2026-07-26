@@ -12,6 +12,8 @@ const logRoutes = require('./routes/logs');
 const adminRoutes = require('./routes/admin');
 const settingsRoutes = require('./routes/settings');
 const contestRoutes = require('./routes/contests');
+const leaderboardRoutes = require('./routes/leaderboard');
+const { startScheduler } = require('./scheduler');
 
 const path = require('path');
 
@@ -40,6 +42,7 @@ app.use(['/api/logs', '/logs'], logRoutes);
 app.use(['/api/admin', '/admin'], adminRoutes);
 app.use(['/api/settings', '/settings'], settingsRoutes);
 app.use(['/api/contests', '/contests'], contestRoutes);
+app.use(['/api/leaderboard', '/leaderboard'], leaderboardRoutes);
 
 // SPA Catch-all: If it's not an API call, serve the index.html
 app.get('*', (req, res, next) => {
@@ -96,6 +99,7 @@ app.use((err, req, res, next) => {
 if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`🚀 Code Hunt API running at http://localhost:${PORT}`);
+    startScheduler();
   });
 }
 

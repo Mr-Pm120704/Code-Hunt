@@ -11,7 +11,8 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
-  const [viewMode, setViewMode] = useState('practice'); // 'practice' or 'contests'
+  const [viewMode, setViewMode] = useState('practice');
+  const [stats, setStats] = useState(null);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -21,12 +22,14 @@ export default function StudentDashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [probRes, contRes] = await Promise.allSettled([
+      const [probRes, contRes, statsRes] = await Promise.allSettled([
         api.get(`/problems?t=${Date.now()}`),
-        api.get(`/contests?t=${Date.now()}`)
+        api.get(`/contests?t=${Date.now()}`),
+        api.get('/submit/stats'),
       ]);
       if (probRes.status === 'fulfilled') setProblems(probRes.value.data);
       if (contRes.status === 'fulfilled') setContests(contRes.value.data);
+      if (statsRes.status === 'fulfilled') setStats(statsRes.value.data);
     } catch (e) {
       setError('Failed to load data.');
     } finally {
@@ -81,6 +84,9 @@ export default function StudentDashboard() {
             <div className="text-right hidden sm:block">
               <p className="text-xs font-bold text-foreground">{user.name}</p>
               <p className="text-[10px] text-muted">{user.email}</p>
+              {user.year && (
+                <p className="text-[10px] text-brand font-bold">{user.year === '1' ? '1st Year' : user.year === '2' ? '2nd Year' : user.year === '3' ? '3rd Year' : user.year}</p>
+              )}
             </div>
             <button 
               onClick={handleLogout}
@@ -220,8 +226,54 @@ export default function StudentDashboard() {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Level & XP Card */}
+            {stats && (
+              <div className="lc-card p-6 border-border bg-surface">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-bold text-foreground">{stats.levelTitle}</h3>
+                  <span className="text-xs font-bold px-2 py-1 rounded-full bg-brand/10 text-brand">{stats.xp} XP</span>
+                </div>
+                <div className="mb-2">
+                  <div className="flex justify-between text-xs text-muted mb-1">
+                    <span>Progress to Level {stats.level + 1}</span>
+                    <span>{stats.xp - stats.currentLevelXp} / 100</span>
+                  </div>
+                  <div className="w-full bg-border h-2 rounded-full overflow-hidden">
+                    <div className="bg-brand h-full transition-all duration-500" style={{ width: `${((stats.xp - stats.currentLevelXp) / 100) * 100}%` }}></div>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center text-xs text-muted">
+                  <span>Solved: {stats.totalSolved}</span>
+                  <span>Time: {stats.totalCompletionTime < 60 ? `${stats.totalCompletionTime}m` : `${Math.floor(stats.totalCompletionTime / 60)}h ${stats.totalCompletionTime % 60}m`}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Daily Goal Card */}
+            {stats && (
+              <div className="lc-card p-6 border-border bg-surface">
+                <h3 className="font-bold text-foreground mb-3">Today's Goal</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-2xl font-black text-foreground">{stats.todaySolvedCount} / {stats.dailyGoal}</span>
+                  {stats.todaySolvedCount >= stats.dailyGoal && (
+                    <span className="text-xs font-bold px-2 py-1 rounded-full bg-green-500/10 text-green-500">Done</span>
+                  )}
+                </div>
+                <div className="w-full bg-border h-2 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-500 ${stats.todaySolvedCount >= stats.dailyGoal ? 'bg-green-500' : 'bg-brand'}`}
+                    style={{ width: `${Math.min((stats.todaySolvedCount / stats.dailyGoal) * 100, 100)}%` }}
+                  ></div>
+                </div>
+                {stats.todaySolvedCount < stats.dailyGoal && (
+                  <p className="text-xs text-muted mt-2">Solve {stats.dailyGoal - stats.todaySolvedCount} more to complete today's goal</p>
+                )}
+              </div>
+            )}
+
+            {/* Solved Progress Card */}
             <div className="lc-card p-6 border-border bg-surface">
-              <h3 className="font-bold text-foreground mb-4">My Status</h3>
+              <h3 className="font-bold text-foreground mb-4">Problem Progress</h3>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted">Solved</span>
@@ -232,6 +284,20 @@ export default function StudentDashboard() {
                 </div>
               </div>
             </div>
+
+            {/* Leaderboard Link */}
+            <button
+              onClick={() => navigate('/leaderboard')}
+              className="lc-card p-6 border-border bg-gradient-to-br from-brand/10 to-transparent w-full text-left hover:border-brand/50 transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-brand mb-1">Leaderboard</h3>
+                  <p className="text-xs text-muted">See your ranking among peers</p>
+                </div>
+                <span className="text-brand text-xl">→</span>
+              </div>
+            </button>
 
             <div className="lc-card p-6 border-border bg-gradient-to-br from-brand/10 to-transparent">
               <h3 className="font-bold text-brand mb-2">AI Monitoring</h3>
