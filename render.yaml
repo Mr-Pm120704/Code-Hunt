@@ -3,8 +3,8 @@ services:
     name: code-hunt-backend
     runtime: node
     rootDir: backend
-    buildCommand: cd backend && npm install
-    startCommand: cd backend && node src/index.js
+    buildCommand: npm install
+    startCommand: node src/index.js
     envVars:
       - key: DATABASE_URL
         value: mongodb+srv://murgunanandham7639_db_user:86XceeWRoEJCiaJ7@cluster0.unzu83f.mongodb.net/Code-Hunt?retryWrites=true&w=majority&appName=Cluster0
