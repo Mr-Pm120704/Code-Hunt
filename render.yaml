@@ -7,7 +7,7 @@ services:
     startCommand: npm start
     envVars:
       - key: DATABASE_URL
-        value: mongodb+srv://sanjaibaskar14_db_user:G5M1Am6zC63Wespc@cluster0.5otrpwi.mongodb.net/codehunt?retryWrites=true&w=majority&appName=Cluster0
+        value: mongodb+srv://murgunanandham7639_db_user:86XceeWRoEJCiaJ7@cluster0.unzu83f.mongodb.net/Code-Hunt?retryWrites=true&w=majority&appName=Cluster0
       - key: JWT_SECRET
         value: codehunt-super-secret-jwt-key-2024-production-ready
       - key: NODE_ENV
