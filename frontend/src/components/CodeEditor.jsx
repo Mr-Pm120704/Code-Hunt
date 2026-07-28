@@ -23,10 +23,11 @@ export default function CodeEditor({ value, onChange, language = 'javascript' })
     }
   };
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   const handleEditorMount = useCallback((editor, monaco) => {
     editorRef.current = editor;
 
-    // Define a clean light theme that won't fight Tailwind resets
     monaco.editor.defineTheme('codehunt-light', {
       base: 'vs',
       inherit: true,
@@ -54,17 +55,13 @@ export default function CodeEditor({ value, onChange, language = 'javascript' })
     });
     monaco.editor.setTheme('codehunt-light');
 
-    // Focus and recalculate layout after mount
     editor.focus();
-    // Multiple layout passes to handle container resize race conditions
     requestAnimationFrame(() => {
       editor.layout();
-      // Second pass after the DOM has fully settled
       setTimeout(() => editor.layout(), 100);
     });
   }, []);
 
-  // Robust resize observer to keep Monaco layout in sync
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -79,9 +76,18 @@ export default function CodeEditor({ value, onChange, language = 'javascript' })
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (editorRef.current) {
+        setTimeout(() => editorRef.current.layout(), 100);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <div ref={containerRef} className="code-editor-root">
-      {/* macOS-style title bar */}
       <div className="code-editor-titlebar">
         <div className="code-editor-dots">
           <span className="dot dot-red"></span>
@@ -93,7 +99,6 @@ export default function CodeEditor({ value, onChange, language = 'javascript' })
         </span>
       </div>
 
-      {/* Monaco Editor container */}
       <div className="code-editor-body">
         <Editor
           key={language}
@@ -109,30 +114,30 @@ export default function CodeEditor({ value, onChange, language = 'javascript' })
           }
           options={{
             minimap: { enabled: false },
-            fontSize: 14,
+            fontSize: isMobile ? 16 : 14,
             fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
             fontLigatures: true,
-            lineNumbers: 'on',
+            lineNumbers: isMobile ? 'off' : 'on',
             roundedSelection: true,
             scrollBeyondLastLine: false,
             readOnly: false,
-            automaticLayout: false, // We handle layout ourselves via ResizeObserver
-            padding: { top: 16, bottom: 16 },
+            automaticLayout: false,
+            padding: { top: isMobile ? 8 : 16, bottom: isMobile ? 8 : 16 },
             cursorBlinking: 'smooth',
             cursorSmoothCaretAnimation: 'on',
             cursorStyle: 'line',
             cursorWidth: 2,
             renderLineHighlight: 'all',
             smoothScrolling: true,
-            mouseWheelZoom: false,
-            contextmenu: false,      // Disabled for security (right-click blocked anyway)
-            quickSuggestions: true,
-            suggestOnTriggerCharacters: true,
+            mouseWheelZoom: isMobile,
+            contextmenu: false,
+            quickSuggestions: !isMobile,
+            suggestOnTriggerCharacters: !isMobile,
             tabSize: 4,
             insertSpaces: true,
-            wordWrap: 'off',
-            folding: true,
-            lineDecorationsWidth: 10,
+            wordWrap: isMobile ? 'on' : 'off',
+            folding: !isMobile,
+            lineDecorationsWidth: isMobile ? 4 : 10,
             lineNumbersMinChars: 3,
             glyphMargin: false,
             overviewRulerLanes: 0,
@@ -140,13 +145,14 @@ export default function CodeEditor({ value, onChange, language = 'javascript' })
             overviewRulerBorder: false,
             scrollbar: {
               vertical: 'auto',
-              horizontal: 'auto',
-              verticalScrollbarSize: 8,
+              horizontal: isMobile ? 'hidden' : 'auto',
+              verticalScrollbarSize: isMobile ? 16 : 8,
               horizontalScrollbarSize: 8,
               useShadows: false,
             },
-            // Prevent copy/paste at the editor level (security requirement)
             domReadOnly: false,
+            renderLineHighlightOnlyWhenFocus: isMobile,
+            fixedOverflowWidgets: true,
           }}
         />
       </div>

@@ -33,26 +33,25 @@ export default function CodingChallenge() {
   const [webcamEnabled, setWebcamEnabled] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState(null);
+  const [mobilePanel, setMobilePanel] = useState('code');
   const codeRef = useRef(code);
   const getCode = useCallback(() => codeRef.current, []);
 
   useEffect(() => { codeRef.current = code; }, [code]);
 
-  // ==========  addToast MUST be defined before any useEffect that uses it ==========
   const addToast = useCallback((message, type = 'default') => {
     const id = Date.now();
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 5000);
   }, []);
 
-  // Fetch problem + webcam setting
   useEffect(() => {
     const timer = setTimeout(() => {
       if (loading) {
         console.warn("Initial load taking too long, forcing ready state.");
         setLoading(false);
       }
-    }, 8000); // 8 second safety timeout
+    }, 8000);
 
     Promise.all([
       api.get(`/problems/${id}`),
@@ -66,7 +65,6 @@ export default function CodingChallenge() {
       .catch((err) => {
         console.error("Failed to load challenge:", err);
         addToast("Error loading challenge. Please try again.", "error");
-        // Don't navigate away immediately, give user a chance or show error state
       })
       .finally(() => {
         setLoading(false);
@@ -76,23 +74,21 @@ export default function CodingChallenge() {
     return () => clearTimeout(timer);
   }, [id, navigate, addToast]);
 
-  // fullscreen / multi-tab detection
   useEffect(() => {
     if (!hasStarted || submitted) return;
 
     const handleHidden = () => {
       if (isDisqualified || submitted) return;
-      // Log the event
       api.post('/logs', { problemId: id }).catch(() => {});
 
       setLeaveCount((prev) => {
         const next = prev + 1;
         if (next === 1) {
           setOverlayVisible(true);
-          addToast('⚠️ You left the exam window. You may rejoin once.');
+          addToast('You left the exam window. You may rejoin once.');
         } else {
           setIsDisqualified(true);
-          addToast('❌ Multiple window switches detected — session terminated.', 'error');
+          addToast('Multiple window switches detected - session terminated.', 'error');
           setTimeout(() => {
             alert('SECURITY VIOLATION: Multiple tab/window switches detected. Your session has been terminated.');
             localStorage.clear();
@@ -114,7 +110,6 @@ export default function CodingChallenge() {
     };
 
     const handleBlur = () => {
-      // window.blur often accompanies tab change; treat same as hidden
       handleHidden();
     };
 
@@ -127,28 +122,25 @@ export default function CodingChallenge() {
     };
   }, [hasStarted, id, isDisqualified, submitted, overlayVisible, addToast]);
 
-  // copy/paste/right-click security
   useEffect(() => {
     if (!hasStarted || isDisqualified || submitted) return;
 
     const onCopy = (e) => {
       e.preventDefault();
       setDistractionCount(prev => prev + 1);
-      addToast(`⚠️ Forbidden action: Copy`, 'warn');
+      addToast('Forbidden action: Copy', 'warn');
       api.post('/logs', { problemId: id }).catch(() => {});
     };
 
     const onPaste = (e) => {
       e.preventDefault();
       setDistractionCount(prev => prev + 1);
-      addToast(`⚠️ Forbidden action: Paste`, 'warn');
+      addToast('Forbidden action: Paste', 'warn');
       api.post('/logs', { problemId: id }).catch(() => {});
     };
 
     const onContext = (e) => {
-      // RIGHT-CLICK: Block but DO NOT count as distraction
       e.preventDefault();
-      // Silently blocked - no toast, no distraction count
     };
 
     document.addEventListener('copy', onCopy);
@@ -162,7 +154,6 @@ export default function CodingChallenge() {
     };
   }, [hasStarted, id, isDisqualified, submitted, addToast]);
 
-  // keyboard shortcuts (Ctrl/Cmd + C/V/A/Z) — disable and warn
   useEffect(() => {
     if (!hasStarted || isDisqualified || submitted) return;
 
@@ -171,7 +162,7 @@ export default function CodingChallenge() {
       if ((e.ctrlKey || e.metaKey) && ['c', 'v', 'a', 'z'].includes(key)) {
         e.preventDefault();
         setDistractionCount(prev => prev + 1);
-        addToast('⚠️ Keyboard shortcuts like copy/paste/select/undo are disabled during the exam.', 'warn');
+        addToast('Keyboard shortcuts like copy/paste/select/undo are disabled during the exam.', 'warn');
         api.post('/logs', { problemId: id }).catch(() => {});
       }
     };
@@ -202,10 +193,8 @@ export default function CodingChallenge() {
   };
 
   const handleDistraction = useCallback((direction) => {
-    // Only terminate on real hardware failure (camera physically unavailable)
     if (direction === 'camera-off') {
       setIsDisqualified(true);
-      // Only send problemId — no code snapshot
       api.post('/logs', { problemId: id }).catch(() => {});
       alert('Camera access was lost. Your session has been terminated.');
       localStorage.clear();
@@ -213,21 +202,19 @@ export default function CodingChallenge() {
       return;
     }
 
-    // All other distractions are counted and logged – NOT an immediate disqualification
     setDistractionCount((prev) => {
       const next = prev + 1;
       let label;
-      if (direction === 'away') label = '❌ Face not detected';
+      if (direction === 'away') label = 'Face not detected';
       else if (direction === 'extreme-left' || direction === 'extreme-right') 
-        label = '⚠️ Head turned too far - looking behind you';
-      else if (direction === 'extreme-down') label = '🚨 Looking down - checking external materials?';
-      else if (direction === 'extreme-up') label = '⚠️ Looking up - checking wall/ceiling?';
-      else if (direction === 'extreme-position-warmup') label = '⚠️ Extreme head position detected';
-      else if (direction.startsWith('object-')) label = `🚫 CHEATING: ${direction.replace('object-', '').replace('-', ' ')} detected!`;
-      else if (direction === 'multiple-faces') label = '👥 CHEATING: Multiple people in frame!';
-      else label = `⚠️ Violation: ${direction}`;
+        label = 'Head turned too far - looking behind you';
+      else if (direction === 'extreme-down') label = 'Looking down - checking external materials?';
+      else if (direction === 'extreme-up') label = 'Looking up - checking wall/ceiling?';
+      else if (direction === 'extreme-position-warmup') label = 'Extreme head position detected';
+      else if (direction.startsWith('object-')) label = `CHEATING: ${direction.replace('object-', '').replace('-', ' ')} detected!`;
+      else if (direction === 'multiple-faces') label = 'CHEATING: Multiple people in frame!';
+      else label = `Violation: ${direction}`;
       addToast(label, 'warn');
-      // Lightweight log — only problemId, no code snapshot
       api.post('/logs', { problemId: id }).catch(() => {});
       if (next >= 10) {
         setShowBanner(true);
@@ -243,7 +230,6 @@ export default function CodingChallenge() {
     setRunLoading(true);
     try {
       const payload = { code, problemId: id, language };
-
       const { data } = await api.post('/run', payload);
       setTestResults(data);
       addToast(data.allPassed ? 'Execution complete!' : 'Execution failed.', data.allPassed ? 'success' : 'warn');
@@ -263,11 +249,10 @@ export default function CodingChallenge() {
       stop();
       addToast(
         data.allPassed
-          ? `✅ Submitted! ${data.summary?.passed ?? 0}/${data.summary?.total ?? 0} test cases passed.`
-          : `⚠️ Submitted. Only ${data.summary?.passed ?? 0}/${data.summary?.total ?? 0} test cases passed.`,
+          ? `Submitted! ${data.summary?.passed ?? 0}/${data.summary?.total ?? 0} test cases passed.`
+          : `Submitted. Only ${data.summary?.passed ?? 0}/${data.summary?.total ?? 0} test cases passed.`,
         data.allPassed ? 'success' : 'warn'
       );
-      // Navigate back to dashboard after 2s so solved count refreshes
       setTimeout(() => navigate('/student'), 2000);
     } catch (err) {
       addToast('Submission failed.', 'error');
@@ -288,12 +273,14 @@ export default function CodingChallenge() {
     </div>
   );
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
   return (
     <div className="h-screen flex flex-col bg-background text-foreground transition-colors duration-300 overflow-hidden">
       {!hasStarted && (
-        <div className="fixed inset-0 z-[10000] bg-background/95 backdrop-blur flex items-center justify-center p-6 text-center">
-          <div className="max-w-md w-full lc-card p-10 border-2 border-brand bg-surface">
-            <h2 className="text-3xl font-black text-foreground mb-4">Exam Security</h2>
+        <div className="fixed inset-0 z-[10000] bg-background/95 backdrop-blur flex items-center justify-center p-4 sm:p-6 text-center">
+          <div className="max-w-md w-full lc-card p-6 sm:p-10 border-2 border-brand bg-surface">
+            <h2 className="text-2xl sm:text-3xl font-black text-foreground mb-4">Exam Security</h2>
             <p className="text-muted text-sm mb-8 leading-relaxed">
               This environment is proctored by AI. By starting, you agree to:
               <br /><br />
@@ -313,9 +300,9 @@ export default function CodingChallenge() {
       )}
 
       {webcamEnabled && !cameraReady && (
-        <div className="fixed inset-0 z-[20000] bg-background/95 backdrop-blur flex items-center justify-center p-6 text-center">
-          <div className="max-w-xl w-full lc-card p-10 border-2 border-red-500 bg-surface shadow-xl">
-            <h2 className="text-3xl font-black text-foreground mb-4">Camera Required</h2>
+        <div className="fixed inset-0 z-[20000] bg-background/95 backdrop-blur flex items-center justify-center p-4 sm:p-6 text-center">
+          <div className="max-w-xl w-full lc-card p-6 sm:p-10 border-2 border-red-500 bg-surface shadow-xl">
+            <h2 className="text-2xl sm:text-3xl font-black text-foreground mb-4">Camera Required</h2>
             <p className="text-muted text-sm mb-6 leading-relaxed">
               This exam requires your webcam to be enabled. Please allow camera access in your browser and refresh the page.
             </p>
@@ -345,8 +332,8 @@ export default function CodingChallenge() {
       {showBanner && <DistractionBanner count={distractionCount} />}
 
       {overlayVisible && (
-        <div className="fixed inset-0 z-[30000] bg-black/60 flex items-center justify-center p-6">
-          <div className="max-w-md w-full lc-card p-8 border-border bg-surface text-center">
+        <div className="fixed inset-0 z-[30000] bg-black/60 flex items-center justify-center p-4 sm:p-6">
+          <div className="max-w-md w-full lc-card p-6 sm:p-8 border-border bg-surface text-center">
             <h3 className="text-lg font-bold mb-3">You left the exam window</h3>
             <p className="text-sm text-muted mb-6">You may rejoin once. Click <strong>Rejoin</strong> to continue. Further tab/window switches will terminate your session.</p>
             <div className="flex justify-center gap-3">
@@ -362,20 +349,20 @@ export default function CodingChallenge() {
       )}
 
       {/* Navbar */}
-      <div className="lc-navbar shrink-0 justify-between px-4 md:px-6 bg-surface border-b border-border">
-        <div className="flex items-center gap-2 md:gap-4">
-          <button onClick={() => navigate('/student')} className="text-muted hover:text-foreground text-xs md:text-sm">
+      <div className="lc-navbar shrink-0 justify-between px-3 sm:px-4 md:px-6 bg-surface border-b border-border">
+        <div className="flex items-center gap-2 md:gap-4 min-w-0">
+          <button onClick={() => navigate('/student')} className="text-muted hover:text-foreground text-xs md:text-sm shrink-0">
             ← <span className="hidden sm:inline">Problems</span>
           </button>
-          <span className="text-border">|</span>
-          <h1 className="text-xs md:text-sm font-bold text-foreground truncate max-w-[120px] sm:max-w-none">{problem?.title}</h1>
+          <span className="text-border hidden sm:inline">|</span>
+          <h1 className="text-xs md:text-sm font-bold text-foreground truncate max-w-[100px] sm:max-w-[200px] md:max-w-none">{problem?.title}</h1>
         </div>
         
-        <div className="flex items-center gap-2 md:gap-6">
+        <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4 shrink-0">
           <select 
             value={language} 
             onChange={(e) => handleLanguageChange(e.target.value)}
-            className="bg-background border border-border text-foreground text-xs md:text-sm font-bold rounded px-2 py-1 outline-none focus:border-brand"
+            className="bg-background border border-border text-foreground text-[10px] md:text-sm font-bold rounded px-1.5 py-0.5 md:px-2 md:py-1 outline-none focus:border-brand"
           >
             <option value="java">Java</option>
             <option value="python">Python</option>
@@ -383,7 +370,7 @@ export default function CodingChallenge() {
             <option value="c">C</option>
           </select>
 
-          <div className="flex items-center gap-2 text-[10px] md:text-xs text-muted">
+          <div className="flex items-center gap-1.5 text-[10px] md:text-xs text-muted">
              <span className="whitespace-nowrap">⏱ {formatted()}</span>
              {webcamEnabled && (
                <>
@@ -413,44 +400,64 @@ export default function CodingChallenge() {
         </div>
       </div>
 
-      {/* Workspace */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden p-2 gap-2">
-        {/* Left: Description */}
-        <div className="w-full md:w-[45%] h-[40%] md:h-auto bg-surface rounded-lg border border-border overflow-y-auto p-4 md:p-6 scrollbar-hide">
-          <h2 className="text-xl font-bold text-foreground mb-4">{problem?.title}</h2>
-          <div className="mb-4">
-            <span className={`badge-${problem?.difficulty.toLowerCase()}`}>
-              {problem?.difficulty}
-            </span>
-          </div>
-          
-          <div 
-            className="text-foreground text-sm leading-relaxed problem-desc"
-            dangerouslySetInnerHTML={{
-              __html: problem?.description
-                .replace(/\*\*(.*?)\*\*/g, '<strong class="text-foreground">$1</strong>')
-                .replace(/`([^`]+)`/g, '<code class="bg-background border border-border px-1.5 py-0.5 rounded text-brand font-mono text-[13px]">$1</code>')
-                .replace(/```(java|js)?\n?([\s\S]*?)```/g, '<pre class="bg-background border border-border p-4 rounded-lg my-4 overflow-x-auto"><code class="text-muted">$2</code></pre>')
-                .replace(/\n/g, '<br/>')
-            }}
-          />
+      {/* Mobile Panel Switcher */}
+      <div className="md:hidden flex border-b border-border bg-surface shrink-0">
+        {['code', 'description', 'output'].map((panel) => (
+          <button
+            key={panel}
+            onClick={() => setMobilePanel(panel)}
+            className={`flex-1 py-2 text-[11px] font-bold uppercase tracking-wider transition-colors ${
+              mobilePanel === panel
+                ? 'text-brand border-b-2 border-brand bg-brand/5'
+                : 'text-muted'
+            }`}
+          >
+            {panel === 'code' ? 'Code' : panel === 'description' ? 'Problem' : 'Output'}
+          </button>
+        ))}
+      </div>
 
-          <div className="mt-8 pt-8 border-t border-border">
-            {testResults && (
-              <TestResults results={testResults.results} summary={testResults.summary} />
-            )}
+      {/* Workspace */}
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden p-1.5 sm:p-2 gap-1.5 sm:gap-2">
+        {/* Left: Description */}
+        <div className={`${mobilePanel === 'description' ? 'flex' : 'hidden'} md:flex w-full md:w-[45%] md:h-auto bg-surface rounded-lg border border-border overflow-y-auto p-3 sm:p-4 md:p-6 ${mobilePanel === 'description' ? 'flex-1' : ''}`}>
+          <div className="w-full">
+            <h2 className="text-lg sm:text-xl font-bold text-foreground mb-3 sm:mb-4">{problem?.title}</h2>
+            <div className="mb-4">
+              <span className={`badge-${problem?.difficulty.toLowerCase()}`}>
+                {problem?.difficulty}
+              </span>
+            </div>
+            
+            <div 
+              className="text-foreground text-sm leading-relaxed problem-desc"
+              dangerouslySetInnerHTML={{
+                __html: problem?.description
+                  .replace(/\*\*(.*?)\*\*/g, '<strong class="text-foreground">$1</strong>')
+                  .replace(/`([^`]+)`/g, '<code class="bg-background border border-border px-1.5 py-0.5 rounded text-brand font-mono text-[13px]">$1</code>')
+                  .replace(/```(java|js)?\n?([\s\S]*?)```/g, '<pre class="bg-background border border-border p-3 sm:p-4 rounded-lg my-4 overflow-x-auto"><code class="text-muted text-xs sm:text-sm">$2</code></pre>')
+                  .replace(/\n/g, '<br/>')
+              }}
+            />
+
+            <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-border">
+              {testResults && (
+                <TestResults results={testResults.results} summary={testResults.summary} />
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Right: Editor */}
-        <div className="flex-1 flex flex-col gap-2 overflow-hidden">
-          <div className="flex-1 min-h-0">
+        {/* Right: Editor + Output */}
+        <div className={`${mobilePanel === 'code' || mobilePanel === 'output' ? 'flex' : 'hidden'} md:flex flex-1 flex-col gap-1.5 sm:gap-2 overflow-hidden`}>
+          {/* Editor */}
+          <div className={`${mobilePanel === 'code' ? 'flex-1' : 'hidden md:flex'} md:flex-1 min-h-0`}>
             <CodeEditor value={code} onChange={setCode} language={language} />
           </div>
 
           {/* Bottom Panel — Console output */}
           {testResults && (
-            <div className="h-[30%] bg-[#0d1117] rounded-lg border border-border p-4 overflow-y-auto font-mono text-xs">
+            <div className={`${mobilePanel === 'output' ? 'flex-1' : 'hidden md:block'} h-[30%] md:h-auto bg-[#0d1117] rounded-lg border border-border p-3 sm:p-4 overflow-y-auto font-mono text-xs`}>
               <h3 className="text-[10px] font-bold text-muted uppercase mb-3 tracking-wider">Console Output</h3>
               <div className="space-y-3">
                 {testResults.results.map((res, idx) => (
@@ -459,7 +466,7 @@ export default function CodingChallenge() {
                       {'▶ Test Case #'}{idx + 1} {res.passed ? '✓' : '✗'}
                     </span>
                     {res.actual ? (
-                      <pre className={`mt-1 whitespace-pre-wrap break-all leading-relaxed ${res.error ? 'text-red-300' : 'text-green-300'}`}>
+                      <pre className={`mt-1 whitespace-pre-wrap break-all leading-relaxed text-xs ${res.error ? 'text-red-300' : 'text-green-300'}`}>
                         {res.actual}
                       </pre>
                     ) : (
@@ -476,7 +483,6 @@ export default function CodingChallenge() {
         </div>
       </div>
 
-      {/* Webcam Monitor — only if webcam is enabled by admin */}
       {webcamEnabled && (
         <WebcamMonitor
           onDistraction={handleDistraction}

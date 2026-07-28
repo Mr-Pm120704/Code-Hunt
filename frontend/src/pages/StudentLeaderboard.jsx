@@ -50,23 +50,22 @@ export default function StudentLeaderboard() {
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
-      {/* Navbar */}
-      <nav className="lc-navbar px-4 md:px-6 bg-surface border-b border-border">
+      <nav className="lc-navbar px-3 sm:px-4 md:px-6 bg-surface border-b border-border">
         <div className="max-w-6xl mx-auto w-full flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/student')} className="text-muted hover:text-foreground text-sm">
-              ← Back
+          <div className="flex items-center gap-2 sm:gap-4">
+            <button onClick={() => navigate('/student')} className="text-muted hover:text-foreground text-xs sm:text-sm">
+              ← <span className="hidden sm:inline">Back</span>
             </button>
-            <h1 className="text-lg md:text-xl font-bold text-brand">Code Hunt</h1>
+            <h1 className="text-base sm:text-lg md:text-xl font-bold text-brand">Code Hunt</h1>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <div className="text-right hidden sm:block">
               <p className="text-xs font-bold text-foreground">{user.name}</p>
               <p className="text-[10px] text-muted">{year}</p>
             </div>
             <button
               onClick={() => { localStorage.clear(); navigate('/login'); }}
-              className="text-xs text-muted hover:text-red-500 font-medium transition-colors"
+              className="text-[10px] sm:text-xs text-muted hover:text-red-500 font-medium transition-colors"
             >
               Logout
             </button>
@@ -74,36 +73,33 @@ export default function StudentLeaderboard() {
         </div>
       </nav>
 
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-black text-foreground mb-2">🏆 Leaderboard</h1>
-          <p className="text-muted">{year} — Ranked by problems solved and completion time</p>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-black text-foreground mb-2">🏆 Leaderboard</h1>
+          <p className="text-xs sm:text-sm text-muted">{year} — Ranked by problems solved and completion time</p>
         </div>
 
-        {/* My Rank Card */}
         {myRank && (
-          <div className="lc-card p-5 mb-6 border-2 border-brand bg-brand/5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <span className="text-3xl font-black text-brand">#{myRank.rank}</span>
-                <div>
-                  <p className="font-bold text-foreground">{myRank.name} (You)</p>
-                  <p className="text-xs text-muted">{myRank.levelTitle} • {myRank.xp} XP</p>
+          <div className="lc-card p-3 sm:p-5 mb-4 sm:mb-6 border-2 border-brand bg-brand/5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <span className="text-xl sm:text-3xl font-black text-brand">#{myRank.rank}</span>
+                <div className="min-w-0">
+                  <p className="text-sm sm:text-base font-bold text-foreground truncate">{myRank.name} (You)</p>
+                  <p className="text-[10px] sm:text-xs text-muted">{myRank.levelTitle} • {myRank.xp} XP</p>
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-lg font-bold text-foreground">{myRank.totalSolved} solved</p>
-                <p className="text-xs text-muted">{myRank.formattedTime}</p>
+              <div className="text-right shrink-0">
+                <p className="text-sm sm:text-lg font-bold text-foreground">{myRank.totalSolved} solved</p>
+                <p className="text-[10px] sm:text-xs text-muted">{myRank.formattedTime}</p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Leaderboard Table */}
-        <div className="lc-card border-border bg-surface overflow-hidden">
-          {/* Header */}
-          <div className="grid grid-cols-[60px_1fr_120px_100px_100px] gap-2 px-4 py-3 bg-background border-b border-border text-xs font-bold text-muted uppercase tracking-wider">
+        {/* Desktop Table */}
+        <div className="hidden sm:block lc-card border-border bg-surface overflow-hidden">
+          <div className="grid grid-cols-[50px_1fr_100px_80px_80px] gap-2 px-4 py-3 bg-background border-b border-border text-[10px] font-bold text-muted uppercase tracking-wider">
             <div className="text-center">Rank</div>
             <div>Student</div>
             <div className="text-center">Level</div>
@@ -111,20 +107,19 @@ export default function StudentLeaderboard() {
             <div className="text-center">Time</div>
           </div>
 
-          {/* Rows */}
           {leaderboard.length === 0 ? (
-            <div className="p-12 text-center text-muted">
-              <p className="text-lg mb-2">No students yet</p>
-              <p className="text-sm">Be the first to solve a problem!</p>
+            <div className="p-10 sm:p-12 text-center text-muted">
+              <p className="text-base sm:text-lg mb-2">No students yet</p>
+              <p className="text-xs sm:text-sm">Be the first to solve a problem!</p>
             </div>
           ) : (
             leaderboard.map((entry) => (
               <div
                 key={entry.id}
-                className={`grid grid-cols-[60px_1fr_120px_100px_100px] gap-2 px-4 py-3 border-b border-border last:border-b-0 transition-colors items-center ${getRankStyle(entry.rank, entry.isCurrentUser)}`}
+                className={`grid grid-cols-[50px_1fr_100px_80px_80px] gap-2 px-4 py-3 border-b border-border last:border-b-0 transition-colors items-center ${getRankStyle(entry.rank, entry.isCurrentUser)}`}
               >
                 <div className="text-center">
-                  <span className={`text-lg font-black ${entry.rank <= 3 ? 'text-lg' : 'text-sm text-muted'}`}>
+                  <span className={`text-sm font-black ${entry.rank <= 3 ? 'text-lg' : 'text-sm text-muted'}`}>
                     {getMedal(entry.rank)}
                   </span>
                 </div>
@@ -132,10 +127,10 @@ export default function StudentLeaderboard() {
                   <p className={`text-sm font-bold truncate ${entry.isCurrentUser ? 'text-brand' : 'text-foreground'}`}>
                     {entry.name} {entry.isCurrentUser && <span className="text-xs font-medium">(You)</span>}
                   </p>
-                  <p className="text-xs text-muted">{entry.email}</p>
+                  <p className="text-[10px] text-muted truncate">{entry.email}</p>
                 </div>
                 <div className="text-center">
-                  <span className="text-xs font-bold px-2 py-1 rounded-full bg-brand/10 text-brand">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand/10 text-brand">
                     {entry.levelTitle}
                   </span>
                 </div>
@@ -143,7 +138,42 @@ export default function StudentLeaderboard() {
                   <span className="text-sm font-bold text-foreground">{entry.totalSolved}</span>
                 </div>
                 <div className="text-center">
-                  <span className="text-xs text-muted">{entry.formattedTime}</span>
+                  <span className="text-[10px] text-muted">{entry.formattedTime}</span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Mobile Cards */}
+        <div className="sm:hidden space-y-2">
+          {leaderboard.length === 0 ? (
+            <div className="lc-card p-8 text-center text-muted">
+              <p className="text-base mb-2">No students yet</p>
+              <p className="text-xs">Be the first to solve a problem!</p>
+            </div>
+          ) : (
+            leaderboard.map((entry) => (
+              <div
+                key={entry.id}
+                className={`lc-card p-3 border transition-colors ${getRankStyle(entry.rank, entry.isCurrentUser)}`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-black text-brand w-8 text-center">{getMedal(entry.rank)}</span>
+                    <div className="min-w-0">
+                      <p className={`text-sm font-bold truncate ${entry.isCurrentUser ? 'text-brand' : 'text-foreground'}`}>
+                        {entry.name} {entry.isCurrentUser && '(You)'}
+                      </p>
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-brand/10 text-brand">
+                        {entry.levelTitle}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold text-foreground">{entry.totalSolved}</p>
+                    <p className="text-[9px] text-muted">{entry.formattedTime}</p>
+                  </div>
                 </div>
               </div>
             ))

@@ -14,7 +14,6 @@ export default function ContestPage() {
   const [activeTab, setActiveTab] = useState('problems');
   const [timeRemaining, setTimeRemaining] = useState('');
   const [status, setStatus] = useState('Upcoming');
-  // Map of problemId -> { passedCount, totalCount, passedTestCases }
   const [progress, setProgress] = useState({});
 
   const fetchProgress = useCallback(async () => {
@@ -22,7 +21,7 @@ export default function ContestPage() {
       const res = await api.get(`/contests/${id}/my-progress`);
       setProgress(res.data);
     } catch {
-      // Non-critical — silently ignore
+      // Non-critical
     }
   }, [id]);
 
@@ -41,7 +40,6 @@ export default function ContestPage() {
     fetchProgress();
   }, [id, fetchProgress]);
 
-  // Re-fetch progress whenever the user returns to this tab (e.g. after submitting)
   useEffect(() => {
     window.addEventListener('focus', fetchProgress);
     return () => window.removeEventListener('focus', fetchProgress);
@@ -90,51 +88,50 @@ export default function ContestPage() {
   );
 
   if (error || !contest) return (
-    <div className="h-screen bg-background flex items-center justify-center text-red-500 font-bold">
+    <div className="h-screen bg-background flex items-center justify-center text-red-500 font-bold text-sm px-4 text-center">
       {error || 'Contest not found'}
     </div>
   );
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
-      {/* Navbar */}
-      <nav className="lc-navbar px-4 md:px-6 bg-surface border-b border-border">
+      <nav className="lc-navbar px-3 sm:px-4 md:px-6 bg-surface border-b border-border">
         <div className="max-w-6xl mx-auto w-full flex items-center justify-between">
-          <div className="flex items-center gap-2 md:gap-6">
-            <button onClick={() => navigate('/student')} className="text-muted hover:text-foreground mr-2">← Back</button>
-            <h1 className="text-lg md:text-xl font-bold text-foreground">{contest.title}</h1>
+          <div className="flex items-center gap-2 sm:gap-4 md:gap-6 min-w-0">
+            <button onClick={() => navigate('/student')} className="text-muted hover:text-foreground text-xs sm:text-sm shrink-0">← Back</button>
+            <h1 className="text-sm sm:text-base md:text-xl font-bold text-foreground truncate">{contest.title}</h1>
           </div>
-          <div className="text-right hidden sm:block">
+          <div className="text-right hidden sm:block shrink-0">
             <p className="text-xs font-bold text-foreground">{user.name}</p>
           </div>
         </div>
       </nav>
 
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
         {/* Contest Header */}
-        <div className="lc-card p-6 mb-8 border border-border bg-surface flex flex-col md:flex-row justify-between items-center gap-6">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">{contest.title}</h2>
-            <p className="text-sm text-muted">{contest.description}</p>
-            <p className="text-xs text-muted mt-2">
+        <div className="lc-card p-4 sm:p-6 mb-4 sm:mb-6 md:mb-8 border border-border bg-surface flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6">
+          <div className="min-w-0">
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground mb-1 sm:mb-2">{contest.title}</h2>
+            <p className="text-xs sm:text-sm text-muted line-clamp-2">{contest.description}</p>
+            <p className="text-[10px] sm:text-xs text-muted mt-1.5 sm:mt-2">
               {new Date(contest.startTime).toLocaleString()} — {new Date(contest.endTime).toLocaleString()}
             </p>
           </div>
-          <div className="text-center md:text-right bg-background p-4 rounded-lg border border-border min-w-[200px]">
-            <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${
+          <div className="text-center sm:text-right bg-background p-3 sm:p-4 rounded-lg border border-border min-w-[160px] sm:min-w-[200px] w-full sm:w-auto shrink-0">
+            <p className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1 ${
               status === 'Active' ? 'text-green-500' : status === 'Upcoming' ? 'text-yellow-500' : 'text-gray-500'
             }`}>
               {status === 'Upcoming' ? 'Starts In' : status === 'Active' ? 'Ends In' : 'Status'}
             </p>
-            <p className="text-2xl font-mono font-bold text-foreground">{timeRemaining}</p>
+            <p className="text-lg sm:text-xl md:text-2xl font-mono font-bold text-foreground">{timeRemaining}</p>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-1.5 sm:gap-2 mb-4 sm:mb-6">
           {['problems', ...(isAdmin ? ['leaderboard'] : [])].map((tab) => (
             <button key={tab} onClick={() => setActiveTab(tab)}
-              className={`px-6 py-2.5 rounded-lg text-sm font-bold capitalize transition-all border ${activeTab === tab
+              className={`px-3 sm:px-5 md:px-6 py-1.5 sm:py-2 md:py-2.5 rounded-lg text-[10px] sm:text-xs md:text-sm font-bold capitalize transition-all border ${activeTab === tab
                 ? 'bg-brand/10 text-brand border-brand/30'
                 : 'bg-surface text-muted border-border hover:bg-background'
               }`}>
@@ -143,26 +140,21 @@ export default function ContestPage() {
           ))}
         </div>
 
-        {/* Content */}
         {activeTab === 'problems' && (
           <div>
             {status === 'Upcoming' ? (
-              <div className="lc-card p-12 text-center border border-border bg-surface">
-                <span className="text-4xl block mb-4">⏳</span>
-                <h3 className="text-xl font-bold text-foreground mb-2">Contest hasn't started yet!</h3>
-                <p className="text-muted">The challenges will be revealed once the countdown reaches zero.</p>
+              <div className="lc-card p-8 sm:p-12 text-center border border-border bg-surface">
+                <span className="text-3xl sm:text-4xl block mb-4">⏳</span>
+                <h3 className="text-lg sm:text-xl font-bold text-foreground mb-2">Contest hasn't started yet!</h3>
+                <p className="text-xs sm:text-sm text-muted">The challenges will be revealed once the countdown reaches zero.</p>
               </div>
             ) : (
               <div className="bg-surface border border-border rounded-xl overflow-hidden">
-                {/* Past contest notice */}
                 {status === 'Past' && (
-                  <div className="bg-gray-500/10 border-b border-border px-5 py-3 text-xs text-muted flex flex-col gap-2">
+                  <div className="bg-gray-500/10 border-b border-border px-3 sm:px-5 py-2.5 sm:py-3 text-[10px] sm:text-xs text-muted flex flex-col gap-1.5 sm:gap-2">
                     <div className="flex items-center gap-2">
                       <span>🔓</span>
-                      <span>This contest has ended. You can review the problem statements, but you may not enter or submit new solutions.</span>
-                    </div>
-                    <div className="text-[11px] text-gray-500">
-                      Click a challenge to view the statement only; coding attempts are disabled once the contest has ended.
+                      <span>This contest has ended. You can review the problem statements, but you may not submit new solutions.</span>
                     </div>
                   </div>
                 )}
@@ -178,43 +170,36 @@ export default function ContestPage() {
                     return (
                       <div
                         key={p.id}
-                        className={`border-b border-border ${contestAvailable ? 'hover:bg-background/50 cursor-pointer' : 'bg-gray-100'} p-4 flex items-center justify-between transition-colors ${allPassed ? 'bg-green-500/5' : ''}`}
+                        className={`border-b border-border last:border-b-0 ${contestAvailable ? 'hover:bg-background/50 cursor-pointer' : 'bg-gray-100'} p-3 sm:p-4 flex items-center justify-between transition-colors ${allPassed ? 'bg-green-500/5' : ''}`}
                         onClick={() => {
                           if (!contestAvailable) return;
                           navigate(`/challenge/${p.id}`);
                         }}
                       >
-                        <div className="flex items-center gap-4">
-                          {/* Problem letter */}
-                          <span className="text-muted font-bold w-6">{String.fromCharCode(65 + i)}</span>
-
-                          {/* Solved checkmark */}
+                        <div className="flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0">
+                          <span className="text-muted font-bold w-5 sm:w-6 text-xs sm:text-sm shrink-0">{String.fromCharCode(65 + i)}</span>
                           {allPassed && (
-                            <span className="text-green-500 text-sm">✓</span>
+                            <span className="text-green-500 text-xs sm:text-sm shrink-0">✓</span>
                           )}
-
-                          <span className={`text-base text-foreground font-medium transition-colors ${contestAvailable ? 'hover:text-brand' : 'text-gray-500'}`}>
+                          <span className={`text-xs sm:text-sm md:text-base text-foreground font-medium transition-colors truncate ${contestAvailable ? 'hover:text-brand' : 'text-gray-500'}`}>
                             {p.title}
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-3 flex-wrap justify-end">
-                          {/* Test case progress badge */}
+                        <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 shrink-0 ml-2">
                           {hasSub && (
-                            <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
+                            <span className={`text-[9px] sm:text-[10px] sm:text-xs font-bold px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full border ${
                               allPassed
                                 ? 'text-green-500 bg-green-500/10 border-green-500/30'
                                 : 'text-yellow-500 bg-yellow-500/10 border-yellow-500/30'
                             }`}>
-                              {passedCount}/{totalCount} tests
+                              {passedCount}/{totalCount}
                             </span>
                           )}
-
-                          <span className={`badge-${p.difficulty.toLowerCase()} text-xs`}>
+                          <span className={`badge-${p.difficulty.toLowerCase()} text-[9px] sm:text-[10px] sm:text-xs`}>
                             {p.difficulty}
                           </span>
-
-                          <span className="text-xs font-bold text-brand bg-brand/10 px-2.5 py-1 rounded-full border border-brand/20">
+                          <span className="text-[9px] sm:text-[10px] sm:text-xs font-bold text-brand bg-brand/10 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full border border-brand/20">
                             {p.points} Pts
                           </span>
                         </div>
@@ -222,7 +207,7 @@ export default function ContestPage() {
                     );
                   })
                 ) : (
-                  <div className="p-8 text-center text-muted">No problems available for this contest.</div>
+                  <div className="p-6 sm:p-8 text-center text-muted text-sm">No problems available for this contest.</div>
                 )}
               </div>
             )}
