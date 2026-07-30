@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 import api from '../api/client';
 
 import AdminProblemForm from '../components/AdminProblemForm';
@@ -72,6 +73,38 @@ export default function AdminDashboard() {
   };
 
   const logout = () => { localStorage.clear(); navigate('/login'); };
+
+  const downloadStudentReport = () => {
+    const filtered = students
+      .filter((s) => studentYearFilter === 'All' || s.year === studentYearFilter)
+      .filter((s) => studentClassFilter === 'All' || s.class === studentClassFilter);
+
+    const data = filtered.map((s) => ({
+      'Name': s.name,
+      'Email': s.email,
+      'Year': s.year || '',
+      'Class': s.class || '',
+      'Problems Solved': s.solvedCount,
+      'Solved Problems': s.solvedProblems.map(p => p.problem.title).join(', ') || 'None',
+      'Easy Solved': s.solvedProblems.filter(p => p.problem.difficulty === 'Easy').length,
+      'Medium Solved': s.solvedProblems.filter(p => p.problem.difficulty === 'Medium').length,
+      'Hard Solved': s.solvedProblems.filter(p => p.problem.difficulty === 'Hard').length,
+      'Had Distractions': s.hadDistraction ? 'Yes' : 'No',
+      'Total Distractions': s.totalDistractions,
+      'Webcam Enabled': s.webcamEnabled ? 'Yes' : 'No',
+      'Registered On': new Date(s.createdAt).toLocaleDateString(),
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    ws['!cols'] = [
+      { wch: 20 }, { wch: 30 }, { wch: 12 }, { wch: 14 },
+      { wch: 15 }, { wch: 40 }, { wch: 12 }, { wch: 14 }, { wch: 12 },
+      { wch: 18 }, { wch: 18 }, { wch: 15 }, { wch: 15 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Students Report');
+    XLSX.writeFile(wb, `students-report-${new Date().toISOString().slice(0,10)}.xlsx`);
+  };
 
   const DIFF_COLORS = {
     Easy: { bg: 'rgba(34,197,94,0.12)', color: '#22c55e' },
@@ -267,6 +300,12 @@ export default function AdminDashboard() {
                   <option value="BCA">BCA</option>
                   <option value="B.SC CS">B.SC CS</option>
                 </select>
+                <button
+                  onClick={downloadStudentReport}
+                  className="bg-brand text-white text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-1.5 sm:py-2 rounded hover:bg-brand-light transition-colors whitespace-nowrap"
+                >
+                  ⬇ Excel
+                </button>
               </div>
             </div>
             <div className="space-y-2 sm:space-y-3">
