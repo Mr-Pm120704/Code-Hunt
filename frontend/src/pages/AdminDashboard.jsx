@@ -26,6 +26,8 @@ export default function AdminDashboard() {
   const [selectedYear, setSelectedYear] = useState(null);
   const [lastUsedYear, setLastUsedYear] = useState(null);
   const [problemYearFilter, setProblemYearFilter] = useState('All');
+  const [studentYearFilter, setStudentYearFilter] = useState('All');
+  const [studentClassFilter, setStudentClassFilter] = useState('All');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -242,19 +244,54 @@ export default function AdminDashboard() {
         {/* Students Tab */}
         {activeTab === 'students' && (
           <div>
-            <h2 className="text-sm sm:text-base md:text-lg font-semibold text-foreground mb-4">Registered Students</h2>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+              <h2 className="text-sm sm:text-base md:text-lg font-semibold text-foreground">Registered Students</h2>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <select
+                  value={studentYearFilter}
+                  onChange={(e) => setStudentYearFilter(e.target.value)}
+                  className="lc-input bg-input border-border text-foreground text-xs sm:text-sm !py-1.5 sm:!py-2 flex-1 sm:flex-none sm:w-32"
+                >
+                  <option value="All">All Years</option>
+                  <option value="1st Year">1st Year</option>
+                  <option value="2nd Year">2nd Year</option>
+                  <option value="3rd Year">3rd Year</option>
+                </select>
+                <select
+                  value={studentClassFilter}
+                  onChange={(e) => setStudentClassFilter(e.target.value)}
+                  className="lc-input bg-input border-border text-foreground text-xs sm:text-sm !py-1.5 sm:!py-2 flex-1 sm:flex-none sm:w-36"
+                >
+                  <option value="All">All Classes</option>
+                  <option value="B.SC AIML">B.SC AIML</option>
+                  <option value="BCA">BCA</option>
+                  <option value="B.SC CS">B.SC CS</option>
+                </select>
+              </div>
+            </div>
             <div className="space-y-2 sm:space-y-3">
-              {students.map((s) => (
+              {students
+                .filter((s) => studentYearFilter === 'All' || s.year === studentYearFilter)
+                .filter((s) => studentClassFilter === 'All' || s.class === studentClassFilter)
+                .map((s) => (
                 <div key={s.id} className="lc-card p-3 sm:p-4 md:p-5 border-border bg-surface">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 sm:gap-3 mb-1 flex-wrap">
+                      <div className="flex items-center gap-1.5 sm:gap-2 mb-1 flex-wrap">
                         <p className="text-sm sm:text-base text-foreground font-bold">{s.name}</p>
                         <span className={`text-[9px] sm:text-[10px] sm:text-[11px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full ${s.hadDistraction ? 'bg-red-500/15 text-red-500' : 'bg-green-500/15 text-green-500'}`}>
                           {s.hadDistraction ? `⚠️ ${s.totalDistractions}` : '✅ Clean'}
                         </span>
                       </div>
-                      <p className="text-xs sm:text-sm text-muted mb-2 sm:mb-3 truncate">{s.email}</p>
+                      <p className="text-xs sm:text-sm text-muted mb-1 truncate">{s.email}</p>
+                      <div className="flex gap-1.5 sm:gap-2 mb-2 sm:mb-3 flex-wrap">
+                        {s.year && (
+                          <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500 border border-purple-500/20">{s.year}</span>
+                        )}
+                        {s.class && (
+                          <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20">{s.class}</span>
+                        )}
+                      </div>
 
                       <div>
                         <p className="text-[10px] sm:text-xs text-muted font-bold uppercase tracking-wider mb-1.5 sm:mb-2">
@@ -286,8 +323,13 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               ))}
-              {students.length === 0 && (
-                <div className="p-6 sm:p-8 text-center text-muted lc-card bg-surface border-border text-sm">No students registered yet.</div>
+              {students
+                .filter((s) => studentYearFilter === 'All' || s.year === studentYearFilter)
+                .filter((s) => studentClassFilter === 'All' || s.class === studentClassFilter)
+                .length === 0 && (
+                <div className="p-6 sm:p-8 text-center text-muted lc-card bg-surface border-border text-sm">
+                  {students.length === 0 ? 'No students registered yet.' : 'No students match the selected filters.'}
+                </div>
               )}
             </div>
           </div>
