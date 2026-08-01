@@ -9,6 +9,7 @@ const CodingChallenge = lazy(() => import('./pages/CodingChallenge'));
 const ContestPage = lazy(() => import('./pages/ContestPage'));
 const StudentLeaderboard = lazy(() => import('./pages/StudentLeaderboard'));
 const Signup = lazy(() => import('./pages/Signup'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const Home = lazy(() => import('./pages/Home'));
 
 
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/login" element={<StudentLogin />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
           <Route
             path="/student"

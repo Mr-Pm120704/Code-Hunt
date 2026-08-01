@@ -23,6 +23,8 @@ model User {
   todaySolvedCount    Int                   @default(0)
   lastSolvedDate      DateTime?
   lastReminderSent    DateTime?
+  resetToken          String?
+  resetTokenExpiry    DateTime?
   createdAt           DateTime              @default(now())
   submissions         Submission[]
   distractionSummaries DistractionSummary[]

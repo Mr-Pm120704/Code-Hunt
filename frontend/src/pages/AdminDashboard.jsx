@@ -8,6 +8,7 @@ import AdminContestForm from '../components/AdminContestForm';
 import StudentLogsModal from '../components/StudentLogsModal';
 import Leaderboard from '../components/Leaderboard';
 import WebcamControl from '../components/WebcamControl';
+import Analytics from '../components/Analytics';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -177,7 +178,7 @@ export default function AdminDashboard() {
 
         {/* Tabs - scrollable on mobile */}
         <div className="flex gap-1.5 sm:gap-2 mb-4 sm:mb-6 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
-          {['problems', 'contests', 'students', 'webcam', 'leaderboard'].map((tab) => (
+          {['problems', 'contests', 'students', 'webcam', 'leaderboard', 'analytics'].map((tab) => (
             <button key={tab} id={`tab-${tab}`} onClick={() => setActiveTab(tab)}
               className={`px-3 sm:px-4 md:px-5 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs md:text-sm font-medium capitalize transition-all border whitespace-nowrap shrink-0 ${activeTab === tab
                 ? 'bg-brand/10 text-brand border-brand/30'
@@ -501,6 +502,11 @@ export default function AdminDashboard() {
               )}
             </div>
           </div>
+        )}
+
+        {/* Analytics Tab */}
+        {activeTab === 'analytics' && (
+          <Analytics students={students} problems={problems} />
         )}
       </div>
 
