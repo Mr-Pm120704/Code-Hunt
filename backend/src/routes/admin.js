@@ -26,6 +26,31 @@ router.get('/webcam-users', authenticateToken, requireAdmin, async (req, res) =>
   }
 });
 
+// POST /api/admin/webcam-bulk-toggle — bulk toggle webcam by year/class
+router.post('/webcam-bulk-toggle', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { webcamEnabled, year, class: studentClass } = req.body;
+
+    if (typeof webcamEnabled !== 'boolean') {
+      return res.status(400).json({ error: 'webcamEnabled must be a boolean' });
+    }
+
+    const where = { role: 'student' };
+    if (year) where.year = year;
+    if (studentClass) where.class = studentClass;
+
+    const result = await prisma.user.updateMany({
+      where,
+      data: { webcamEnabled },
+    });
+
+    res.json({ updated: result.count, webcamEnabled });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to bulk toggle webcam', details: err.message });
+  }
+});
+
 // POST /api/admin/webcam-toggle/:userId — toggle webcam for a specific student
 router.post('/webcam-toggle/:userId', authenticateToken, requireAdmin, async (req, res) => {
   try {

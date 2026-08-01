@@ -8,6 +8,7 @@ export default function WebcamControl() {
   const [filterYear, setFilterYear] = useState('');
   const [filterClass, setFilterClass] = useState('');
   const [togglingId, setTogglingId] = useState(null);
+  const [bulkToggling, setBulkToggling] = useState(null);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -45,6 +46,33 @@ export default function WebcamControl() {
       alert('Failed to update webcam setting: ' + (err.response?.data?.error || err.message));
     } finally {
       setTogglingId(null);
+    }
+  };
+
+  const bulkToggle = async (webcamEnabled, yearFilter, classFilter) => {
+    const label = classFilter || yearFilter || 'All';
+    const action = webcamEnabled ? 'ON' : 'OFF';
+    if (!window.confirm(`Turn ${action} webcam for all students in ${label}?`)) return;
+
+    const key = `${yearFilter || ''}-${classFilter || ''}`;
+    setBulkToggling(key);
+
+    // Optimistic update
+    setUsers((prev) =>
+      prev.map((u) => {
+        if (yearFilter && u.year !== yearFilter) return u;
+        if (classFilter && u.class !== classFilter) return u;
+        return { ...u, webcamEnabled };
+      })
+    );
+
+    try {
+      await api.post('/admin/webcam-bulk-toggle', { webcamEnabled, year: yearFilter || undefined, class: classFilter || undefined });
+    } catch (err) {
+      alert('Failed to bulk update: ' + (err.response?.data?.error || err.message));
+      fetchUsers();
+    } finally {
+      setBulkToggling(null);
     }
   };
 
@@ -130,6 +158,98 @@ export default function WebcamControl() {
             </span>
           );
         })}
+      </div>
+
+      {/* Bulk Controls */}
+      <div className="bg-surface border border-border rounded-xl p-4 mb-4">
+        <h3 className="text-sm font-bold text-foreground mb-3">Bulk Controls</h3>
+        <div className="space-y-3">
+          {/* All Students */}
+          <div className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-background border border-border">
+            <div>
+              <p className="text-sm font-bold text-foreground">All Students</p>
+              <p className="text-xs text-muted">{users.length} total</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => bulkToggle(true, '', '')}
+                disabled={bulkToggling === '-'}
+                className="px-3 py-1.5 text-xs font-bold rounded bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-green-500/20 transition-colors disabled:opacity-50"
+              >
+                {bulkToggling === '-' ? '...' : 'All ON'}
+              </button>
+              <button
+                onClick={() => bulkToggle(false, '', '')}
+                disabled={bulkToggling === '-'}
+                className="px-3 py-1.5 text-xs font-bold rounded bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+              >
+                {bulkToggling === '-' ? '...' : 'All OFF'}
+              </button>
+            </div>
+          </div>
+
+          {/* Year-wise Controls */}
+          {years.map((y) => {
+            const yearOn = users.filter((u) => u.year === y && u.webcamEnabled).length;
+            const yearTotal = users.filter((u) => u.year === y).length;
+            const bulkKey = `${y}-`;
+            return (
+              <div key={y} className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-background border border-border">
+                <div>
+                  <p className="text-sm font-bold text-foreground">{y}</p>
+                  <p className="text-xs text-muted">{yearOn}/{yearTotal} ON</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => bulkToggle(true, y, '')}
+                    disabled={bulkToggling === bulkKey}
+                    className="px-3 py-1.5 text-xs font-bold rounded bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                  >
+                    {bulkToggling === bulkKey ? '...' : 'ON'}
+                  </button>
+                  <button
+                    onClick={() => bulkToggle(false, y, '')}
+                    disabled={bulkToggling === bulkKey}
+                    className="px-3 py-1.5 text-xs font-bold rounded bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                  >
+                    {bulkToggling === bulkKey ? '...' : 'OFF'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Class-wise Controls */}
+          {classes.map((c) => {
+            const classOn = users.filter((u) => u.class === c && u.webcamEnabled).length;
+            const classTotal = users.filter((u) => u.class === c).length;
+            const bulkKey = `-${c}`;
+            return (
+              <div key={c} className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-background border border-border">
+                <div>
+                  <p className="text-sm font-bold text-foreground">{c}</p>
+                  <p className="text-xs text-muted">{classOn}/{classTotal} ON</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => bulkToggle(true, '', c)}
+                    disabled={bulkToggling === bulkKey}
+                    className="px-3 py-1.5 text-xs font-bold rounded bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                  >
+                    {bulkToggling === bulkKey ? '...' : 'ON'}
+                  </button>
+                  <button
+                    onClick={() => bulkToggle(false, '', c)}
+                    disabled={bulkToggling === bulkKey}
+                    className="px-3 py-1.5 text-xs font-bold rounded bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                  >
+                    {bulkToggling === bulkKey ? '...' : 'OFF'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Table */}
