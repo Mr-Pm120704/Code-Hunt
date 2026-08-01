@@ -21,7 +21,7 @@ export default function StudentLogin() {
       localStorage.setItem('user', JSON.stringify(data.user));
       navigate('/student');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      setError(err.response?.data?.error || err.response?.data?.message || 'Login failed');
     } finally {
       setLoading(false);
     }
