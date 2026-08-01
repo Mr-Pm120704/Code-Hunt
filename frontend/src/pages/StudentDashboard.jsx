@@ -55,6 +55,8 @@ export default function StudentDashboard() {
     : problems.filter(p => p.category === activeCategory);
 
   const solvedCount = problems.filter(p => p.isSolved).length;
+  const totalMarks = solvedCount * 2;
+  const maxMarks = problems.length * 2;
   const progressPercent = problems.length > 0 ? (solvedCount / problems.length) * 100 : 0;
 
   return (
@@ -299,6 +301,10 @@ export default function StudentDashboard() {
                 </div>
                 <div className="w-full bg-border h-1.5 sm:h-2 rounded-full overflow-hidden">
                   <div className="bg-brand h-full transition-all duration-500" style={{ width: `${progressPercent}%` }}></div>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-border">
+                  <span className="text-xs sm:text-sm text-muted">Total Marks</span>
+                  <span className="text-sm sm:text-base md:text-lg font-bold text-brand">{totalMarks} / {maxMarks}</span>
                 </div>
               </div>
             </div>

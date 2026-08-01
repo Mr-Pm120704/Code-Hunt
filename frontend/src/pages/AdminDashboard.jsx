@@ -29,6 +29,8 @@ export default function AdminDashboard() {
   const [problemYearFilter, setProblemYearFilter] = useState('All');
   const [studentYearFilter, setStudentYearFilter] = useState('All');
   const [studentClassFilter, setStudentClassFilter] = useState('All');
+  const [leaderboardYear, setLeaderboardYear] = useState('1st Year');
+  const [overallLeaderboard, setOverallLeaderboard] = useState([]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -55,6 +57,14 @@ export default function AdminDashboard() {
     window.addEventListener('focus', fetchData);
     return () => window.removeEventListener('focus', fetchData);
   }, [fetchData]);
+
+  useEffect(() => {
+    if (activeTab === 'leaderboard') {
+      api.get(`/leaderboard/${encodeURIComponent(leaderboardYear)}?t=${Date.now()}`)
+        .then(({ data }) => setOverallLeaderboard(data.leaderboard || []))
+        .catch(() => setOverallLeaderboard([]));
+    }
+  }, [activeTab, leaderboardYear]);
 
   const deleteProblem = async (id) => {
     if (!window.confirm('Delete this problem? All related submissions and logs will also be deleted.')) return;
@@ -382,11 +392,82 @@ export default function AdminDashboard() {
         {/* Leaderboard Tab */}
         {activeTab === 'leaderboard' && (
           <div>
-            <h2 className="text-sm sm:text-base md:text-lg font-semibold text-foreground mb-4">Contest Leaderboards</h2>
-            
-            <div className="mb-4 sm:mb-6">
-              <p className="text-xs sm:text-sm text-muted mb-3">Select a contest to view leaderboard:</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+            {/* Overall Year-wise Leaderboard */}
+            <div className="mb-6 sm:mb-8">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+                <h2 className="text-sm sm:text-base md:text-lg font-semibold text-foreground">Overall Leaderboard</h2>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={leaderboardYear}
+                    onChange={(e) => setLeaderboardYear(e.target.value)}
+                    className="lc-input bg-input border-border text-foreground text-xs sm:text-sm !py-1.5 sm:!py-2 w-40"
+                  >
+                    <option value="1st Year">1st Year</option>
+                    <option value="2nd Year">2nd Year</option>
+                    <option value="3rd Year">3rd Year</option>
+                  </select>
+                </div>
+              </div>
+
+              {overallLeaderboard.length === 0 ? (
+                <div className="p-6 sm:p-8 text-center text-muted lc-card bg-surface border-border text-sm">No students found for {leaderboardYear}.</div>
+              ) : (
+                <div className="bg-surface border border-border rounded-xl overflow-hidden">
+                  {/* Desktop Table */}
+                  <div className="hidden sm:grid grid-cols-[60px_60px_1fr_100px_100px_100px_80px] gap-2 px-4 py-3 bg-background border-b border-border text-xs font-bold text-muted uppercase tracking-wider">
+                    <div>Rank</div>
+                    <div>Medal</div>
+                    <div>Student</div>
+                    <div className="text-center">Solved</div>
+                    <div className="text-center">Marks</div>
+                    <div className="text-center">XP</div>
+                    <div className="text-center">Time</div>
+                  </div>
+                  {overallLeaderboard.map((s) => (
+                    <div key={s.id} className="hidden sm:grid grid-cols-[60px_60px_1fr_100px_100px_100px_80px] gap-2 px-4 py-3 border-b border-border last:border-b-0 hover:bg-background/50 transition-colors items-center">
+                      <div className="text-sm font-bold text-foreground">#{s.rank}</div>
+                      <div className="text-lg">
+                        {s.rank === 1 ? '🥇' : s.rank === 2 ? '🥈' : s.rank === 3 ? '🥉' : ''}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-foreground truncate">{s.name}</p>
+                        <p className="text-xs text-muted truncate">{s.email}</p>
+                      </div>
+                      <div className="text-center text-sm font-bold text-foreground">{s.totalSolved}</div>
+                      <div className="text-center text-sm font-bold text-brand">{s.totalMarks}</div>
+                      <div className="text-center text-sm font-medium text-foreground">{s.xp}</div>
+                      <div className="text-center text-xs text-muted">{s.formattedTime}</div>
+                    </div>
+                  ))}
+                  {/* Mobile Cards */}
+                  <div className="sm:hidden">
+                    {overallLeaderboard.map((s) => (
+                      <div key={s.id} className="p-3 border-b border-border last:border-b-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-bold text-foreground">#{s.rank}</span>
+                          <span className="text-base">{s.rank === 1 ? '🥇' : s.rank === 2 ? '🥈' : s.rank === 3 ? '🥉' : ''}</span>
+                          <span className="text-sm font-bold text-foreground truncate flex-1">{s.name}</span>
+                        </div>
+                        <div className="flex gap-3 text-[10px] text-muted">
+                          <span>Solved: <span className="font-bold text-foreground">{s.totalSolved}</span></span>
+                          <span>Marks: <span className="font-bold text-brand">{s.totalMarks}</span></span>
+                          <span>XP: <span className="font-bold text-foreground">{s.xp}</span></span>
+                          <span>Time: <span className="font-bold text-foreground">{s.formattedTime}</span></span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Contest Leaderboards */}
+            <div>
+              <h2 className="text-sm sm:text-base md:text-lg font-semibold text-foreground mb-4">Contest Leaderboards</h2>
+              
+              <div className="mb-4 sm:mb-6">
+                <p className="text-xs sm:text-sm text-muted mb-3">Select a contest to view leaderboard:</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                 {contests.length === 0 ? (
                   <p className="text-xs sm:text-sm text-muted col-span-full">No contests available.</p>
                 ) : (
@@ -410,14 +491,15 @@ export default function AdminDashboard() {
                     </button>
                   ))
                 )}
+                </div>
               </div>
-            </div>
 
-            {selectedLeaderboardContest && (
-              <div>
-                <Leaderboard contestId={selectedLeaderboardContest} />
-              </div>
-            )}
+              {selectedLeaderboardContest && (
+                <div>
+                  <Leaderboard contestId={selectedLeaderboardContest} />
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
