@@ -67,10 +67,7 @@ export default function AdminLogin() {
           </div>
 
           <div>
-            <div className="flex items-center justify-between">
-              <label className="block text-[10px] sm:text-xs font-bold text-muted uppercase tracking-widest mb-2">Password</label>
-              <Link to="/forgot-password" className="text-[10px] sm:text-xs text-brand hover:underline font-medium">Forgot Password?</Link>
-            </div>
+            <label className="block text-[10px] sm:text-xs font-bold text-muted uppercase tracking-widest mb-2">Password</label>
             <input
               type="password"
               name="admin-password"

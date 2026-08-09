@@ -184,7 +184,7 @@ export default function AdminDashboard() {
                 ? 'bg-brand/10 text-brand border-brand/30'
                 : 'bg-surface text-muted border-border hover:bg-background'
               }`}>
-              {tab === 'problems' ? '📝 Problems' : tab === 'contests' ? '🏆 Contests' : tab === 'students' ? '👥 Students' : tab === 'webcam' ? '📷 Webcam' : '🏅 Leaderboard'}
+              {tab === 'problems' ? '📝 Problems' : tab === 'contests' ? '🏆 Contests' : tab === 'students' ? '👥 Students' : tab === 'webcam' ? '📷 Webcam' : tab === 'analytics' ? '📊 Analytics' : '🏅 Leaderboard'}
             </button>
           ))}
         </div>
@@ -219,6 +219,55 @@ export default function AdminDashboard() {
                 </button>
               </div>
             </div>
+
+            {/* Problem Stats */}
+            {(() => {
+              const yearProblems = problems.filter((p) => problemYearFilter === 'All' || (p.year || '1st Year') === problemYearFilter);
+              const totalProblems = problems.length;
+              const yearCount = yearProblems.length;
+              const difficultyCounts = { Easy: 0, Medium: 0, Hard: 0 };
+              yearProblems.forEach((p) => { if (difficultyCounts[p.difficulty] !== undefined) difficultyCounts[p.difficulty]++; });
+
+              const yearSolvedStats = {};
+              ['1st Year', '2nd Year', '3rd Year'].forEach((y) => {
+                const yearStudents = students.filter((s) => s.year === y);
+                const totalStudents = yearStudents.length;
+                const totalSolved = yearStudents.reduce((a, s) => a + (s.solvedCount || 0), 0);
+                const avg = totalStudents ? (totalSolved / totalStudents).toFixed(1) : '0';
+                yearSolvedStats[y] = { totalStudents, totalSolved, avg };
+              });
+
+              return (
+                <div className="mb-4 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+                    {['1st Year', '2nd Year', '3rd Year'].map((y) => {
+                      const s = yearSolvedStats[y];
+                      const yearProblemCount = problems.filter((p) => (p.year || '1st Year') === y).length;
+                      return (
+                        <div key={y} className="lc-card p-3 border-border bg-surface">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-[10px] sm:text-xs font-bold text-foreground">{y}</p>
+                            <span className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-500">{yearProblemCount} Q</span>
+                          </div>
+                          <p className="text-[10px] sm:text-xs text-muted">{s.totalStudents} students</p>
+                          <p className="text-sm sm:text-base font-bold text-brand">{s.totalSolved} solved</p>
+                          <p className="text-[9px] sm:text-[10px] text-muted">Avg: {s.avg}/student</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="lc-card p-3 border-border bg-surface flex flex-wrap items-center gap-3 sm:gap-4 text-[10px] sm:text-xs">
+                    <span className="text-muted">Total: <span className="font-bold text-foreground">{totalProblems}</span></span>
+                    <span className="text-muted">Showing: <span className="font-bold text-foreground">{yearCount}</span></span>
+                    <span className="text-green-500 font-bold">Easy: {difficultyCounts.Easy}</span>
+                    <span className="text-yellow-500 font-bold">Medium: {difficultyCounts.Medium}</span>
+                    <span className="text-red-500 font-bold">Hard: {difficultyCounts.Hard}</span>
+                    <span className="text-muted">|</span>
+                    <span className="text-muted">Students solved: <span className="font-bold text-foreground">{students.filter((s) => s.solvedCount > 0).length}/{students.length}</span></span>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="bg-surface border-border border rounded-xl overflow-hidden">
               {problems
