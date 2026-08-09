@@ -9,6 +9,7 @@ export default function StudentLeaderboard() {
   const [myRank, setMyRank] = useState(null);
   const [loading, setLoading] = useState(true);
   const [year, setYear] = useState('');
+  const [totalMarksPossible, setTotalMarksPossible] = useState(0);
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -18,6 +19,7 @@ export default function StudentLeaderboard() {
         setLeaderboard(data.leaderboard || []);
         setMyRank(data.myRank || null);
         setYear(data.year || '');
+        setTotalMarksPossible(data.totalMarksPossible || 0);
       } catch (err) {
         console.error('Failed to load leaderboard:', err);
       } finally {
@@ -90,7 +92,7 @@ export default function StudentLeaderboard() {
                 </div>
               </div>
               <div className="text-right shrink-0">
-                <p className="text-sm sm:text-lg font-bold text-foreground">{myRank.totalMarks} marks</p>
+                <p className="text-sm sm:text-lg font-bold text-foreground">{myRank.totalMarks} / {totalMarksPossible} marks</p>
                 <p className="text-[10px] sm:text-xs text-muted">{myRank.totalSolved} solved • {myRank.formattedTime}</p>
               </div>
             </div>
@@ -99,7 +101,7 @@ export default function StudentLeaderboard() {
 
         {/* Desktop Table */}
         <div className="hidden sm:block lc-card border-border bg-surface overflow-hidden">
-          <div className="grid grid-cols-[50px_1fr_100px_80px_80px_80px] gap-2 px-4 py-3 bg-background border-b border-border text-[10px] font-bold text-muted uppercase tracking-wider">
+          <div className="grid grid-cols-[50px_1fr_100px_80px_100px_80px] gap-2 px-4 py-3 bg-background border-b border-border text-[10px] font-bold text-muted uppercase tracking-wider">
             <div className="text-center">Rank</div>
             <div>Student</div>
             <div className="text-center">Level</div>
@@ -117,7 +119,7 @@ export default function StudentLeaderboard() {
             leaderboard.map((entry) => (
               <div
                 key={entry.id}
-                className={`grid grid-cols-[50px_1fr_100px_80px_80px_80px] gap-2 px-4 py-3 border-b border-border last:border-b-0 transition-colors items-center ${getRankStyle(entry.rank, entry.isCurrentUser)}`}
+                className={`grid grid-cols-[50px_1fr_100px_80px_100px_80px] gap-2 px-4 py-3 border-b border-border last:border-b-0 transition-colors items-center ${getRankStyle(entry.rank, entry.isCurrentUser)}`}
               >
                 <div className="text-center">
                   <span className={`text-sm font-black ${entry.rank <= 3 ? 'text-lg' : 'text-sm text-muted'}`}>
@@ -139,7 +141,7 @@ export default function StudentLeaderboard() {
                   <span className="text-sm font-bold text-foreground">{entry.totalSolved}</span>
                 </div>
                 <div className="text-center">
-                  <span className="text-sm font-bold text-brand">{entry.totalMarks}</span>
+                  <span className="text-sm font-bold text-brand">{entry.totalMarks} / {totalMarksPossible}</span>
                 </div>
                 <div className="text-center">
                   <span className="text-[10px] text-muted">{entry.formattedTime}</span>
@@ -175,7 +177,7 @@ export default function StudentLeaderboard() {
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-bold text-brand">{entry.totalMarks} marks</p>
+                    <p className="text-sm font-bold text-brand">{entry.totalMarks} / {totalMarksPossible} marks</p>
                     <p className="text-[9px] text-muted">{entry.totalSolved} solved • {entry.formattedTime}</p>
                   </div>
                 </div>

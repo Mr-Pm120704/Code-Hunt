@@ -14,17 +14,26 @@ function getLevelTitle(level) {
   return `Level ${level}`;
 }
 
-function formatTime(minutes) {
-  if (minutes < 60) return `${minutes}m`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+function formatTime(seconds) {
+  if (!seconds || seconds === 0) return '<1m';
+  if (seconds < 60) return `${seconds}s`;
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  return s > 0 ? `${m}m ${s}s` : `${m}m`;
 }
 
 // GET /api/leaderboard — get leaderboard for student's year
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const studentYear = normalizeYear(req.user.year);
+
+    // Get total problems for this year
+    const totalProblems = await prisma.problem.count({
+      where: { year: studentYear },
+    });
+    const totalMarks = totalProblems * 2;
 
     const students = await prisma.user.findMany({
       where: {
@@ -70,6 +79,8 @@ router.get('/', authenticateToken, async (req, res) => {
 
     res.json({
       year: studentYear,
+      totalProblems,
+      totalMarksPossible: totalMarks,
       leaderboard: ranked,
       myRank: currentUserRank || null,
     });
@@ -83,6 +94,12 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:year', authenticateToken, async (req, res) => {
   try {
     const targetYear = normalizeYear(req.params.year);
+
+    // Get total problems for this year
+    const totalProblems = await prisma.problem.count({
+      where: { year: targetYear },
+    });
+    const totalMarks = totalProblems * 2;
 
     const students = await prisma.user.findMany({
       where: {
@@ -124,6 +141,8 @@ router.get('/:year', authenticateToken, async (req, res) => {
 
     res.json({
       year: targetYear,
+      totalProblems,
+      totalMarksPossible: totalMarks,
       leaderboard: ranked,
     });
   } catch (err) {

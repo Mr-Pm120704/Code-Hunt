@@ -32,6 +32,7 @@ export default function AdminDashboard() {
   const [studentClassFilter, setStudentClassFilter] = useState('All');
   const [leaderboardYear, setLeaderboardYear] = useState('1st Year');
   const [overallLeaderboard, setOverallLeaderboard] = useState([]);
+  const [leaderboardTotalMarks, setLeaderboardTotalMarks] = useState(0);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -62,8 +63,11 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (activeTab === 'leaderboard') {
       api.get(`/leaderboard/${encodeURIComponent(leaderboardYear)}?t=${Date.now()}`)
-        .then(({ data }) => setOverallLeaderboard(data.leaderboard || []))
-        .catch(() => setOverallLeaderboard([]));
+        .then(({ data }) => {
+          setOverallLeaderboard(data.leaderboard || []);
+          setLeaderboardTotalMarks(data.totalMarksPossible || 0);
+        })
+        .catch(() => { setOverallLeaderboard([]); setLeaderboardTotalMarks(0); });
     }
   }, [activeTab, leaderboardYear]);
 
@@ -484,7 +488,7 @@ export default function AdminDashboard() {
                         <p className="text-xs text-muted truncate">{s.email}</p>
                       </div>
                       <div className="text-center text-sm font-bold text-foreground">{s.totalSolved}</div>
-                      <div className="text-center text-sm font-bold text-brand">{s.totalMarks}</div>
+                      <div className="text-center text-sm font-bold text-brand">{s.totalMarks} / {leaderboardTotalMarks}</div>
                       <div className="text-center text-sm font-medium text-foreground">{s.xp}</div>
                       <div className="text-center text-xs text-muted">{s.formattedTime}</div>
                     </div>
@@ -500,7 +504,7 @@ export default function AdminDashboard() {
                         </div>
                         <div className="flex gap-3 text-[10px] text-muted">
                           <span>Solved: <span className="font-bold text-foreground">{s.totalSolved}</span></span>
-                          <span>Marks: <span className="font-bold text-brand">{s.totalMarks}</span></span>
+                          <span>Marks: <span className="font-bold text-brand">{s.totalMarks} / {leaderboardTotalMarks}</span></span>
                           <span>XP: <span className="font-bold text-foreground">{s.xp}</span></span>
                           <span>Time: <span className="font-bold text-foreground">{s.formattedTime}</span></span>
                         </div>

@@ -78,13 +78,13 @@ router.post('/', authenticateToken, async (req, res) => {
       const isNewSolve = !existingSolved;
       const isToday = isSameDay(student.lastSolvedDate, today);
 
-      // Calculate execution time in minutes
-      const execMinutes = Math.round(executionTimeMs / 60000);
+      // Calculate execution time in seconds
+      const execSeconds = Math.round(executionTimeMs / 1000);
 
       const updateData = {
         xp: student.xp + xpEarned,
         level: calcLevel(student.xp + xpEarned),
-        totalCompletionTime: student.totalCompletionTime + execMinutes,
+        totalCompletionTime: student.totalCompletionTime + execSeconds,
       };
 
       if (isNewSolve) {
