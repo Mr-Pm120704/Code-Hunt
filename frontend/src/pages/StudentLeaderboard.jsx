@@ -10,6 +10,7 @@ export default function StudentLeaderboard() {
   const [loading, setLoading] = useState(true);
   const [year, setYear] = useState('');
   const [totalMarksPossible, setTotalMarksPossible] = useState(0);
+  const [totalProblems, setTotalProblems] = useState(0);
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
@@ -20,6 +21,7 @@ export default function StudentLeaderboard() {
         setMyRank(data.myRank || null);
         setYear(data.year || '');
         setTotalMarksPossible(data.totalMarksPossible || 0);
+        setTotalProblems(data.totalProblems || 0);
       } catch (err) {
         console.error('Failed to load leaderboard:', err);
       } finally {
@@ -93,7 +95,7 @@ export default function StudentLeaderboard() {
               </div>
               <div className="text-right shrink-0">
                 <p className="text-sm sm:text-lg font-bold text-foreground">{myRank.totalMarks} / {totalMarksPossible} marks</p>
-                <p className="text-[10px] sm:text-xs text-muted">{myRank.totalSolved} solved • {myRank.formattedTime}</p>
+                <p className="text-[10px] sm:text-xs text-muted">{myRank.totalSolved} / {totalProblems} solved • {myRank.formattedTime}</p>
               </div>
             </div>
           </div>
@@ -138,7 +140,7 @@ export default function StudentLeaderboard() {
                   </span>
                 </div>
                 <div className="text-center">
-                  <span className="text-sm font-bold text-foreground">{entry.totalSolved}</span>
+                  <span className="text-sm font-bold text-foreground">{entry.totalSolved} / {totalProblems}</span>
                 </div>
                 <div className="text-center">
                   <span className="text-sm font-bold text-brand">{entry.totalMarks} / {totalMarksPossible}</span>
@@ -178,7 +180,7 @@ export default function StudentLeaderboard() {
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-sm font-bold text-brand">{entry.totalMarks} / {totalMarksPossible} marks</p>
-                    <p className="text-[9px] text-muted">{entry.totalSolved} solved • {entry.formattedTime}</p>
+                    <p className="text-[9px] text-muted">{entry.totalSolved} / {totalProblems} solved • {entry.formattedTime}</p>
                   </div>
                 </div>
               </div>
