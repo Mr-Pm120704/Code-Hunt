@@ -57,8 +57,6 @@ export default function AdminDashboard() {
 
   useEffect(() => { 
     fetchData(); 
-    window.addEventListener('focus', fetchData);
-    return () => window.removeEventListener('focus', fetchData);
   }, [fetchData]);
 
   useEffect(() => {

@@ -34,6 +34,8 @@ export default function CodingChallenge() {
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState(null);
   const [mobilePanel, setMobilePanel] = useState('code');
+  const [isSolved, setIsSolved] = useState(false);
+  const [viewMode, setViewMode] = useState('edit');
   const codeRef = useRef(code);
   const getCode = useCallback(() => codeRef.current, []);
 
@@ -59,7 +61,12 @@ export default function CodingChallenge() {
     ])
       .then(([{ data: problem }, { data: settings }]) => {
         setProblem(problem);
-        setCode(problem.starterCode || '');
+        if (problem.isSolved && problem.lastSolvedCode) {
+          setCode(problem.lastSolvedCode);
+          setIsSolved(true);
+        } else {
+          setCode(problem.starterCode || '');
+        }
         setWebcamEnabled(settings.webcamEnabled);
       })
       .catch((err) => {
@@ -356,9 +363,28 @@ export default function CodingChallenge() {
           </button>
           <span className="text-border hidden sm:inline">|</span>
           <h1 className="text-xs md:text-sm font-bold text-foreground truncate max-w-[100px] sm:max-w-[200px] md:max-w-none">{problem?.title}</h1>
+          {isSolved && !submitted && (
+            <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 border border-green-500/20">✓ Solved</span>
+          )}
         </div>
         
         <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4 shrink-0">
+          {isSolved && !submitted && (
+            <div className="flex bg-background border border-border rounded overflow-hidden">
+              <button
+                onClick={() => setViewMode('edit')}
+                className={`text-[9px] sm:text-[10px] font-bold px-2 py-1 transition-colors ${viewMode === 'edit' ? 'bg-brand text-white' : 'text-muted hover:text-foreground'}`}
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => setViewMode('view')}
+                className={`text-[9px] sm:text-[10px] font-bold px-2 py-1 transition-colors ${viewMode === 'view' ? 'bg-brand text-white' : 'text-muted hover:text-foreground'}`}
+              >
+                View
+              </button>
+            </div>
+          )}
           <select 
             value={language} 
             onChange={(e) => handleLanguageChange(e.target.value)}
@@ -452,7 +478,7 @@ export default function CodingChallenge() {
         <div className={`${mobilePanel === 'code' || mobilePanel === 'output' ? 'flex' : 'hidden'} md:flex flex-1 flex-col gap-1.5 sm:gap-2 overflow-hidden`}>
           {/* Editor */}
           <div className={`${mobilePanel === 'code' ? 'flex-1' : 'hidden md:flex'} md:flex-1 min-h-0`}>
-            <CodeEditor value={code} onChange={setCode} language={language} />
+            <CodeEditor value={code} onChange={setCode} language={language} readOnly={isSolved && viewMode === 'view'} />
           </div>
 
           {/* Bottom Panel — Console output */}

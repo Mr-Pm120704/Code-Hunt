@@ -10,7 +10,10 @@ export default function ForgotPassword() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resetCode, setResetCode] = useState('');
   const navigate = useNavigate();
+
+  const [copied, setCopied] = useState(false);
 
   const handleRequestCode = async (e) => {
     e.preventDefault();
@@ -19,9 +22,11 @@ export default function ForgotPassword() {
     setMessage('');
     try {
       const { data } = await api.post('/auth/forgot-password', { email });
-      setMessage(data.message || 'Reset code sent. Check your email.');
       if (data._devCode) {
-        setMessage(`Reset code: ${data._devCode} (dev mode — check server console)`);
+        setResetCode(data._devCode);
+        setMessage('Reset code generated! Copy it below.');
+      } else {
+        setMessage(data.message || 'Reset code sent. Check your email.');
       }
       setStep(2);
     } catch (err) {
@@ -29,6 +34,12 @@ export default function ForgotPassword() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const copyCode = () => {
+    navigator.clipboard.writeText(resetCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleResetPassword = async (e) => {
@@ -74,7 +85,7 @@ export default function ForgotPassword() {
 
         {step === 1 ? (
           <form onSubmit={handleRequestCode} className="space-y-5 sm:space-y-6">
-            <p className="text-xs sm:text-sm text-muted text-center">Enter your email address and we'll send you a reset code.</p>
+            <p className="text-xs sm:text-sm text-muted text-center">Enter your email address and we'll generate a reset code.</p>
             <div>
               <label className="block text-[10px] sm:text-xs font-bold text-muted uppercase tracking-widest mb-2">Email Address</label>
               <input
@@ -91,11 +102,20 @@ export default function ForgotPassword() {
               disabled={loading}
               className="w-full lc-btn-primary py-3 sm:py-3.5 text-base sm:text-lg shadow-[0_0_20px_rgba(255,161,22,0.2)] disabled:opacity-50"
             >
-              {loading ? 'Sending...' : 'Send Reset Code'}
+              {loading ? 'Generating...' : 'Generate Reset Code'}
             </button>
           </form>
         ) : (
           <form onSubmit={handleResetPassword} className="space-y-5 sm:space-y-6">
+            {resetCode && (
+              <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/30 text-center">
+                <p className="text-[10px] sm:text-xs text-green-600 font-bold mb-2">YOUR RESET CODE</p>
+                <p className="text-2xl sm:text-3xl font-black text-green-600 tracking-[0.4em] font-mono">{resetCode}</p>
+                <button type="button" onClick={copyCode} className="mt-2 text-[10px] sm:text-xs text-brand hover:underline font-medium">
+                  {copied ? '✓ Copied!' : 'Click to copy'}
+                </button>
+              </div>
+            )}
             <div>
               <label className="block text-[10px] sm:text-xs font-bold text-muted uppercase tracking-widest mb-2">Reset Code</label>
               <input

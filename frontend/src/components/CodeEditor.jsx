@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
 
-export default function CodeEditor({ value, onChange, language = 'javascript' }) {
+export default function CodeEditor({ value, onChange, language = 'javascript', readOnly = false }) {
   const editorRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -120,7 +120,7 @@ export default function CodeEditor({ value, onChange, language = 'javascript' })
             lineNumbers: isMobile ? 'off' : 'on',
             roundedSelection: true,
             scrollBeyondLastLine: false,
-            readOnly: false,
+            readOnly: readOnly,
             automaticLayout: false,
             padding: { top: isMobile ? 8 : 16, bottom: isMobile ? 8 : 16 },
             cursorBlinking: 'smooth',

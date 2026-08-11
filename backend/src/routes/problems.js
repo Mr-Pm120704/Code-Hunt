@@ -58,10 +58,32 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
     const isAdmin = req.user.role === 'admin';
     const cases = JSON.parse(problem.testCases);
+
+    // Get student's last successful submission for this problem
+    let lastSolvedCode = null;
+    let isSolved = false;
+    if (!isAdmin) {
+      const lastSubmission = await prisma.submission.findFirst({
+        where: {
+          studentId: req.user.id,
+          problemId: problem.id,
+          passedTestCases: true,
+        },
+        orderBy: { timestamp: 'desc' },
+        select: { code: true },
+      });
+      if (lastSubmission) {
+        isSolved = true;
+        lastSolvedCode = lastSubmission.code;
+      }
+    }
+
     res.json({ 
       ...problem, 
       year: problem.year || '1st Year',
-      testCases: isAdmin ? cases : cases.filter(c => !c.hidden) 
+      testCases: isAdmin ? cases : cases.filter(c => !c.hidden),
+      isSolved,
+      lastSolvedCode,
     });
   } catch (err) {
     res.status(500).json({ error: 'Internal server error' });
