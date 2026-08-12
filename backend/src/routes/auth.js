@@ -35,9 +35,7 @@ router.post('/signup', async (req, res) => {
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      await prisma.submission.deleteMany({ where: { studentId: existingUser.id } });
-      await prisma.distractionSummary.deleteMany({ where: { studentId: existingUser.id } });
-      await prisma.user.delete({ where: { email } });
+      return res.status(400).json({ error: 'Email already registered. Please use a different email or contact admin to delete your old account.' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);

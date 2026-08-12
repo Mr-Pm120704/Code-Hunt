@@ -249,4 +249,23 @@ router.delete('/contests/:id', authenticateToken, requireAdmin, async (req, res)
   }
 });
 
+// DELETE /api/admin/students/:id — delete a student
+router.delete('/students/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) return res.status(404).json({ error: 'Student not found' });
+    if (user.role === 'admin') return res.status(400).json({ error: 'Cannot delete admin account' });
+
+    await prisma.submission.deleteMany({ where: { studentId: id } });
+    await prisma.distractionSummary.deleteMany({ where: { studentId: id } });
+    await prisma.user.delete({ where: { id } });
+
+    res.json({ message: 'Student deleted successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete student', details: err.message });
+  }
+});
+
 module.exports = router;

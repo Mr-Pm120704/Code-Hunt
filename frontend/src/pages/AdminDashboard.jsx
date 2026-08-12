@@ -87,6 +87,14 @@ export default function AdminDashboard() {
     } catch { alert('Failed to delete contest.'); }
   };
 
+  const deleteStudent = async (id, name) => {
+    if (!window.confirm(`Delete student "${name}"? This will remove all their submissions and data permanently.`)) return;
+    try {
+      await api.delete(`/admin/students/${id}`);
+      setStudents((prev) => prev.filter((s) => s.id !== id));
+    } catch { alert('Failed to delete student.'); }
+  };
+
   const logout = () => { localStorage.clear(); navigate('/login'); };
 
   const downloadStudentReport = () => {
@@ -417,12 +425,20 @@ export default function AdminDashboard() {
                         )}
                       </div>
                     </div>
-                    <button
-                      onClick={() => setSelectedStudent(s)}
-                      className="bg-background border border-border text-foreground text-[10px] sm:text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 rounded hover:border-brand transition-colors font-medium shrink-0"
-                    >
-                      Details
-                    </button>
+                    <div className="flex gap-1.5 sm:gap-2 shrink-0">
+                      <button
+                        onClick={() => setSelectedStudent(s)}
+                        className="bg-background border border-border text-foreground text-[10px] sm:text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 rounded hover:border-brand transition-colors font-medium"
+                      >
+                        Details
+                      </button>
+                      <button
+                        onClick={() => deleteStudent(s.id, s.name)}
+                        className="bg-red-500/10 border border-red-500/20 text-red-500 text-[10px] sm:text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2 rounded hover:bg-red-500/20 transition-colors font-medium"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
