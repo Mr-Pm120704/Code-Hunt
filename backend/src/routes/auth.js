@@ -21,6 +21,13 @@ const transporter = nodemailer.createTransport({
 
 // Log env check on startup
 console.log('[auth] DATABASE_URL present:', !!process.env.DATABASE_URL);
+console.log('[auth] SMTP_USER present:', !!process.env.SMTP_USER);
+console.log('[auth] SMTP_PASS length:', process.env.SMTP_PASS?.length || 0);
+
+// Verify SMTP connection on startup
+transporter.verify()
+  .then(() => console.log('[auth] SMTP connection verified OK'))
+  .catch((err) => console.error('[auth] SMTP connection FAILED:', err.message));
 
 
 
@@ -125,9 +132,10 @@ router.post('/forgot-password', async (req, res) => {
 
     // Send email with reset code
     const fromEmail = process.env.SMTP_USER || process.env.SMTP_FROM;
+    console.log(`[RESET] Attempting to send reset email to ${email}, SMTP_USER: ${fromEmail || 'NOT SET'}`);
     if (fromEmail) {
       try {
-        await transporter.sendMail({
+        const info = await transporter.sendMail({
           from: `"Code Hunt" <${fromEmail}>`,
           to: email,
           subject: 'Password Reset Code — Code Hunt',
@@ -153,9 +161,10 @@ router.post('/forgot-password', async (req, res) => {
             </div>
           `,
         });
-        console.log(`[RESET] Password reset email sent to ${email}`);
+        console.log(`[RESET] Email sent successfully to ${email}, messageId: ${info.messageId}`);
       } catch (emailErr) {
-        console.error('[RESET] Email send failed:', emailErr.message);
+        console.error('[RESET] Email send FAILED:', emailErr.message);
+        console.error('[RESET] Full error:', JSON.stringify(emailErr, null, 2));
       }
     } else {
       console.log(`[RESET] No SMTP configured. Code for ${email}: ${code}`);
