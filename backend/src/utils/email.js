@@ -19,9 +19,9 @@ const smtpTransporter = nodemailer.createTransport({
 
 async function sendViaResend({ to, subject, html }) {
   const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM || process.env.SMTP_FROM || process.env.SMTP_USER;
+  const from = process.env.RESEND_FROM || 'Code Hunt <onboarding@resend.dev>';
 
-  if (!apiKey || !from) return null;
+  if (!apiKey) return null;
 
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
