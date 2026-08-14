@@ -13,7 +13,13 @@ const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: parseInt(process.env.SMTP_PORT || '587'),
   secure: false,
-  family: 4,
+  connectionTimeout: 15000,
+  greetingTimeout: 15000,
+  socketTimeout: 15000,
+  lookup(hostname, options, callback) {
+    const dns = require('dns');
+    return dns.lookup(hostname, { ...options, family: 4 }, callback);
+  },
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
