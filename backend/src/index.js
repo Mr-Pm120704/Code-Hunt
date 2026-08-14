@@ -85,23 +85,6 @@ app.get('/api/diag', async (req, res) => {
   });
 });
 
-// ─── SMTP Test (remove after debugging) ──────────────────────────────────────
-app.get('/api/diag/smtp', async (req, res) => {
-  const nodemailer = require('nodemailer');
-  const t = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: false,
-    auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-  });
-  try {
-    await t.verify();
-    res.json({ smtp: 'OK', user: process.env.SMTP_USER, passLength: process.env.SMTP_PASS?.length });
-  } catch (e) {
-    res.json({ smtp: 'FAILED', error: e.message, user: process.env.SMTP_USER, passLength: process.env.SMTP_PASS?.length });
-  }
-});
-
 // ─── 404 ──────────────────────────────────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({ error: `Route ${req.method} ${req.path} not found` });

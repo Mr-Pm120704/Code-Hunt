@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://code-hunt-qwqf.onrender.com/api/:path*"
+      "destination": "https://code-hunt-3wgp.onrender.com/api/:path*"
     },
     {
       "source": "/((?!api/).*)",
