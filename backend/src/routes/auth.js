@@ -3,38 +3,15 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
 const prisma = require('../utils/prisma');
+const { sendEmail } = require('../utils/email');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-dev-only';
-
-// Email transporter
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false,
-  connectionTimeout: 15000,
-  greetingTimeout: 15000,
-  socketTimeout: 15000,
-  lookup(hostname, options, callback) {
-    const dns = require('dns');
-    return dns.lookup(hostname, { ...options, family: 4 }, callback);
-  },
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
 
 // Log env check on startup
 console.log('[auth] DATABASE_URL present:', !!process.env.DATABASE_URL);
 console.log('[auth] SMTP_USER present:', !!process.env.SMTP_USER);
-console.log('[auth] SMTP_PASS length:', process.env.SMTP_PASS?.length || 0);
-
-// Verify SMTP connection on startup
-transporter.verify()
-  .then(() => console.log('[auth] SMTP connection verified OK'))
-  .catch((err) => console.error('[auth] SMTP connection FAILED:', err.message));
+console.log('[auth] RESEND_API_KEY present:', !!process.env.RESEND_API_KEY);
 
 
 
@@ -138,43 +115,37 @@ router.post('/forgot-password', async (req, res) => {
     });
 
     // Send email with reset code
-    const fromEmail = process.env.SMTP_USER || process.env.SMTP_FROM;
-    console.log(`[RESET] Attempting to send reset email to ${email}, SMTP_USER: ${fromEmail || 'NOT SET'}`);
-    if (fromEmail) {
-      try {
-        const info = await transporter.sendMail({
-          from: `"Code Hunt" <${fromEmail}>`,
-          to: email,
-          subject: 'Password Reset Code — Code Hunt',
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-              <div style="background: linear-gradient(135deg, #f97316, #ea580c); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-                <h1 style="color: white; margin: 0; font-size: 28px;">🎯 Code Hunt</h1>
-                <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Password Reset</p>
-              </div>
-              <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
-                <p style="font-size: 14px; color: #374151; margin: 0 0 15px 0;">Hello <strong>${user.name}</strong>,</p>
-                <p style="font-size: 14px; color: #6b7280; margin: 0 0 20px 0;">
-                  We received a request to reset your password. Use the code below to reset it:
-                </p>
-                <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
-                  <p style="margin: 0 0 8px 0; font-size: 12px; color: #16a34a; font-weight: bold; text-transform: uppercase;">Your Reset Code</p>
-                  <p style="margin: 0; font-size: 36px; font-weight: black; color: #16a34a; letter-spacing: 8px; font-family: monospace;">${code}</p>
-                </div>
-                <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 20px 0 0 0;">
-                  This code expires in 15 minutes. If you didn't request this, ignore this email.
-                </p>
-              </div>
+    console.log(`[RESET] Attempting to send reset email to ${email}`);
+    try {
+      const info = await sendEmail({
+        to: email,
+        subject: 'Password Reset Code — Code Hunt',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="background: linear-gradient(135deg, #f97316, #ea580c); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">🎯 Code Hunt</h1>
+              <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Password Reset</p>
             </div>
-          `,
-        });
-        console.log(`[RESET] Email sent successfully to ${email}, messageId: ${info.messageId}`);
-      } catch (emailErr) {
-        console.error('[RESET] Email send FAILED:', emailErr.message);
-        console.error('[RESET] Full error:', JSON.stringify(emailErr, null, 2));
-      }
-    } else {
-      console.log(`[RESET] No SMTP configured. Code for ${email}: ${code}`);
+            <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+              <p style="font-size: 14px; color: #374151; margin: 0 0 15px 0;">Hello <strong>${user.name}</strong>,</p>
+              <p style="font-size: 14px; color: #6b7280; margin: 0 0 20px 0;">
+                We received a request to reset your password. Use the code below to reset it:
+              </p>
+              <div style="background: #f0fdf4; border: 2px solid #22c55e; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
+                <p style="margin: 0 0 8px 0; font-size: 12px; color: #16a34a; font-weight: bold; text-transform: uppercase;">Your Reset Code</p>
+                <p style="margin: 0; font-size: 36px; font-weight: black; color: #16a34a; letter-spacing: 8px; font-family: monospace;">${code}</p>
+              </div>
+              <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 20px 0 0 0;">
+                This code expires in 15 minutes. If you didn't request this, ignore this email.
+              </p>
+            </div>
+          </div>
+        `,
+      });
+      console.log(`[RESET] Email sent successfully to ${email} via ${info.provider}`);
+    } catch (emailErr) {
+      console.error('[RESET] Email send FAILED:', emailErr.message);
+      console.error('[RESET] Full error:', JSON.stringify(emailErr, null, 2));
     }
 
     res.json({ message: 'If an account exists with this email, a reset code has been sent.' });

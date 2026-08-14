@@ -1,27 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
-const nodemailer = require('nodemailer');
+const { sendEmail } = require('./utils/email');
 
 const prisma = new PrismaClient();
-
-// Configure email transporter
-// Set these environment variables in Render:
-// SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false,
-  connectionTimeout: 15000,
-  greetingTimeout: 15000,
-  socketTimeout: 15000,
-  lookup(hostname, options, callback) {
-    const dns = require('dns');
-    return dns.lookup(hostname, { ...options, family: 4 }, callback);
-  },
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
 
 function isSameDay(d1, d2) {
   if (!d1 || !d2) return false;
@@ -52,16 +32,7 @@ function getGreeting() {
 }
 
 async function sendReminderEmail(student, todayCount) {
-  const fromEmail = process.env.SMTP_USER || process.env.SMTP_FROM;
-
-  if (!fromEmail) {
-    console.log(`[EMAIL SKIP] No SMTP configured. Would send to: ${student.email}`);
-    console.log(`  Set SMTP_USER and SMTP_PASS in environment to enable email sending.`);
-    return false;
-  }
-
   const mailOptions = {
-    from: `"Code Hunt" <${fromEmail}>`,
     to: student.email,
     subject: 'Daily Coding Reminder — Complete Today\'s Problems!',
     html: `
@@ -99,8 +70,8 @@ async function sendReminderEmail(student, todayCount) {
   };
 
   try {
-    await transporter.sendMail(mailOptions);
-    console.log(`[EMAIL SENT] Reminder sent to ${student.email} (${student.name})`);
+    const info = await sendEmail(mailOptions);
+    console.log(`[EMAIL SENT] Reminder sent to ${student.email} (${student.name}) via ${info.provider}`);
     return true;
   } catch (err) {
     console.error(`[EMAIL FAILED] Could not send to ${student.email}:`, err.message);
