@@ -17,40 +17,7 @@ const smtpTransporter = nodemailer.createTransport({
   },
 });
 
-async function sendViaResend({ to, subject, html }) {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM || 'Code Hunt <onboarding@resend.dev>';
-
-  if (!apiKey) return null;
-
-  const response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from,
-      to: [to],
-      subject,
-      html,
-    }),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Resend API error ${response.status}: ${text}`);
-  }
-
-  return response.json();
-}
-
 async function sendEmail({ to, subject, html }) {
-  const resendResult = await sendViaResend({ to, subject, html });
-  if (resendResult) {
-    return { provider: 'resend', result: resendResult };
-  }
-
   const fromEmail = process.env.SMTP_USER || process.env.SMTP_FROM;
   if (!fromEmail) {
     throw new Error('No email provider configured');

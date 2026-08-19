@@ -11,7 +11,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-dev-only';
 // Log env check on startup
 console.log('[auth] DATABASE_URL present:', !!process.env.DATABASE_URL);
 console.log('[auth] SMTP_USER present:', !!process.env.SMTP_USER);
-console.log('[auth] RESEND_API_KEY present:', !!process.env.RESEND_API_KEY);
 
 
 
