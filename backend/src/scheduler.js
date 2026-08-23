@@ -42,7 +42,7 @@ async function sendReminderEmail(student, todayCount) {
           <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Daily Coding Reminder</p>
         </div>
         <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
-          <p style="font-size: 16px; color: #374151; margin: 0 0 15px 0;">${getGreeting}, <strong>${student.name}</strong>!</p>
+          <p style="font-size: 16px; color: #374151; margin: 0 0 15px 0;">${getGreeting()}, <strong>${student.name}</strong>!</p>
           <p style="font-size: 14px; color: #6b7280; margin: 0 0 20px 0;">
             You haven't completed today's coding goal yet. Keep your streak going!
           </p>
