@@ -7,6 +7,7 @@ import WebcamMonitor from '../components/WebcamMonitor';
 import DistractionBanner from '../components/DistractionBanner';
 import TestResults from '../components/TestResults';
 import Toast from '../components/Toast';
+import useExamSecurity from '../hooks/useExamSecurity';
 
 
 export default function CodingChallenge() {
@@ -46,6 +47,32 @@ export default function CodingChallenge() {
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 5000);
   }, []);
+
+  const handleSecurityViolation = useCallback((reason) => {
+    if (!hasStarted || isDisqualified || submitted) return;
+
+    const labels = {
+      contextmenu: 'Right-click is disabled during the exam.',
+      copy: 'Copy is disabled during the exam.',
+      cut: 'Cut is disabled during the exam.',
+      paste: 'Paste is disabled during the exam.',
+      beforecopy: 'Copy is disabled during the exam.',
+      beforecut: 'Cut is disabled during the exam.',
+      beforepaste: 'Paste is disabled during the exam.',
+      drop: 'Drag-and-drop is disabled during the exam.',
+      selectstart: 'Text selection is disabled during the exam.',
+    };
+
+    const label = labels[reason] || 'Forbidden shortcut or action blocked during the exam.';
+    setDistractionCount((prev) => prev + 1);
+    addToast(label, 'warn');
+    api.post('/logs', { problemId: id }).catch(() => {});
+  }, [addToast, hasStarted, id, isDisqualified, submitted]);
+
+  useExamSecurity({
+    enabled: hasStarted && !isDisqualified && !submitted,
+    onViolation: handleSecurityViolation,
+  });
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -128,55 +155,6 @@ export default function CodingChallenge() {
       window.removeEventListener('blur', handleBlur);
     };
   }, [hasStarted, id, isDisqualified, submitted, overlayVisible, addToast]);
-
-  useEffect(() => {
-    if (!hasStarted || isDisqualified || submitted) return;
-
-    const onCopy = (e) => {
-      e.preventDefault();
-      setDistractionCount(prev => prev + 1);
-      addToast('Forbidden action: Copy', 'warn');
-      api.post('/logs', { problemId: id }).catch(() => {});
-    };
-
-    const onPaste = (e) => {
-      e.preventDefault();
-      setDistractionCount(prev => prev + 1);
-      addToast('Forbidden action: Paste', 'warn');
-      api.post('/logs', { problemId: id }).catch(() => {});
-    };
-
-    const onContext = (e) => {
-      e.preventDefault();
-    };
-
-    document.addEventListener('copy', onCopy);
-    document.addEventListener('paste', onPaste);
-    document.addEventListener('contextmenu', onContext);
-
-    return () => {
-      document.removeEventListener('copy', onCopy);
-      document.removeEventListener('paste', onPaste);
-      document.removeEventListener('contextmenu', onContext);
-    };
-  }, [hasStarted, id, isDisqualified, submitted, addToast]);
-
-  useEffect(() => {
-    if (!hasStarted || isDisqualified || submitted) return;
-
-    const onKeyDown = (e) => {
-      const key = (e.key || '').toLowerCase();
-      if ((e.ctrlKey || e.metaKey) && ['c', 'v', 'a', 'z'].includes(key)) {
-        e.preventDefault();
-        setDistractionCount(prev => prev + 1);
-        addToast('Keyboard shortcuts like copy/paste/select/undo are disabled during the exam.', 'warn');
-        api.post('/logs', { problemId: id }).catch(() => {});
-      }
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [hasStarted, isDisqualified, submitted, addToast, id]);
 
   const startChallenge = () => {
     if (document.documentElement.requestFullscreen) {
@@ -283,7 +261,7 @@ export default function CodingChallenge() {
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   return (
-    <div className="h-screen flex flex-col bg-background text-foreground transition-colors duration-300 overflow-hidden">
+    <div className="exam-secure h-screen flex flex-col bg-background text-foreground transition-colors duration-300 overflow-hidden">
       {!hasStarted && (
         <div className="fixed inset-0 z-[10000] bg-background/95 backdrop-blur flex items-center justify-center p-4 sm:p-6 text-center">
           <div className="max-w-md w-full lc-card p-6 sm:p-10 border-2 border-brand bg-surface">

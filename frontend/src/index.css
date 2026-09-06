@@ -180,6 +180,21 @@ body,
   z-index: 1000;
 }
 
+/* ── Exam Security ─────────────────────────────────────────────────── */
+.exam-secure,
+.exam-secure * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.exam-secure input,
+.exam-secure textarea,
+.exam-secure [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 /* ── Animations ────────────────────────────────────────────────────── */
 @keyframes fadeIn {
   from {
