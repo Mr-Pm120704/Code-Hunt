@@ -61,6 +61,14 @@ export default function CodingChallenge() {
       beforepaste: 'Paste is disabled during the exam.',
       drop: 'Drag-and-drop is disabled during the exam.',
       selectstart: 'Text selection is disabled during the exam.',
+      longpress: 'Long-press is disabled during the exam.',
+      'shortcut:escape': 'Esc key is disabled during the exam.',
+      'shortcut:f12': 'Developer Tools access is blocked.',
+      'shortcut:f5': 'Browser refresh is disabled during the exam.',
+      'devtools:size': 'Developer Tools detected. This is a security violation.',
+      'devtools:debugger': 'Developer Tools detected via debugger. This is a security violation.',
+      'devtools:getter': 'Developer Tools detected. This is a security violation.',
+      'resize:suspect': 'Suspicious window resize detected.',
     };
 
     const label = labels[reason] || 'Forbidden shortcut or action blocked during the exam.';
