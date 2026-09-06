@@ -31,10 +31,18 @@ function getGreeting() {
   return 'Good Evening';
 }
 
+function getTimePeriod() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'morning';
+  if (hour < 17) return 'afternoon';
+  return 'evening';
+}
+
 async function sendReminderEmail(student, todayCount) {
+  const timePeriod = getTimePeriod();
   const mailOptions = {
     to: student.email,
-    subject: 'Daily Coding Reminder — Complete Today\'s Problems!',
+    subject: `Daily Coding Reminder (${timePeriod.charAt(0).toUpperCase() + timePeriod.slice(1)}) — Complete Today's Problems!`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #f97316, #ea580c); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
@@ -83,6 +91,13 @@ async function checkAndSendReminders() {
   try {
     const today = new Date();
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const currentHour = today.getHours();
+
+    // Determine which time period we're in
+    let timePeriod;
+    if (currentHour < 12) timePeriod = 'morning';
+    else if (currentHour < 17) timePeriod = 'afternoon';
+    else timePeriod = 'evening';
 
     // Find all student accounts
     const students = await prisma.user.findMany({
@@ -113,10 +128,20 @@ async function checkAndSendReminders() {
         continue;
       }
 
-      // Skip if already reminded today
+      // Skip if already reminded in this exact time period today
+      // Allow reminders in different time periods (morning + evening)
       if (student.lastReminderSent && isSameDay(student.lastReminderSent, today)) {
-        skippedCount++;
-        continue;
+        const lastSentHour = new Date(student.lastReminderSent).getHours();
+        let lastPeriod;
+        if (lastSentHour < 12) lastPeriod = 'morning';
+        else if (lastSentHour < 17) lastPeriod = 'afternoon';
+        else lastPeriod = 'evening';
+
+        // Skip if already sent in the same time period
+        if (lastPeriod === timePeriod) {
+          skippedCount++;
+          continue;
+        }
       }
 
       // Send reminder email
@@ -131,7 +156,7 @@ async function checkAndSendReminders() {
       if (sent) sentCount++;
     }
 
-    console.log(`[REMINDER] Done. Checked: ${students.length} | Sent: ${sentCount} | Skipped: ${skippedCount}`);
+    console.log(`[REMINDER] Done (${timePeriod}). Checked: ${students.length} | Sent: ${sentCount} | Skipped: ${skippedCount}`);
   } catch (err) {
     console.error('[REMINDER ERROR]', err.message);
   }

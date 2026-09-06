@@ -162,16 +162,18 @@ export default function CodingChallenge() {
       setLeaveCount((prev) => {
         const next = prev + 1;
         if (next === 1) {
+          // First violation: show overlay, give one chance to rejoin
           setOverlayVisible(true);
-          addToast('You left the exam window. You may rejoin once.');
+          addToast('You left the exam window. You may rejoin once.', 'warn');
         } else {
+          // Second violation: auto-submit and redirect to home page
           setIsDisqualified(true);
-          addToast('Multiple window switches detected - auto-submitting & terminating.', 'error');
+          addToast('Multiple window switches detected - auto-submitting & redirecting.', 'error');
           autoSubmitOnDisqualify().finally(() => {
             setTimeout(() => {
               alert('SECURITY VIOLATION: Multiple tab/window switches detected. Your session has been terminated and your code has been auto-submitted.');
               localStorage.clear();
-              window.location.href = '/login';
+              window.location.href = '/';
             }, 1200);
           });
         }
@@ -180,8 +182,9 @@ export default function CodingChallenge() {
     };
 
     const handleVisibility = () => {
-      if (document.visibilityState === 'hidden') handleHidden();
-      else if (document.visibilityState === 'visible') {
+      if (document.visibilityState === 'hidden') {
+        handleHidden();
+      } else if (document.visibilityState === 'visible') {
         if (overlayVisible) {
           setOverlayVisible(false);
           addToast('You have rejoined the exam. Continue.');
@@ -197,14 +200,25 @@ export default function CodingChallenge() {
       handleHidden();
     };
 
+    // Detect new tab / window open via window.open or Ctrl+T
+    // The focus event fires when user switches back to this tab
+    const handleFocus = () => {
+      if (overlayVisible) {
+        setOverlayVisible(false);
+        addToast('You have rejoined the exam. Continue.');
+      }
+    };
+
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('blur', handleBlur);
     window.addEventListener('pagehide', handlePageHide);
+    window.addEventListener('focus', handleFocus);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('blur', handleBlur);
       window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('focus', handleFocus);
     };
   }, [hasStarted, id, isDisqualified, submitted, overlayVisible, addToast, autoSubmitOnDisqualify]);
 
