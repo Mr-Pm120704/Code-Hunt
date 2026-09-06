@@ -7,18 +7,30 @@ services:
     startCommand: node src/index.js
     envVars:
       - key: DATABASE_URL
-        value: mongodb+srv://murgunanandham7639_db_user:86XceeWRoEJCiaJ7@cluster0.unzu83f.mongodb.net/Code-Hunt?retryWrites=true&w=majority&appName=Cluster0
+        value: mongodb+srv://muruganandhamm7639_db_user:86XceeWROeJcujA7@cluster0.unzu83f.mongodb.net/Code-Hunt
       - key: JWT_SECRET
         value: codehunt-secret-2024
       - key: NODE_ENV
         value: production
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        value: muruganandhamm7639@gmail.com
+      - key: SMTP_PASS
+        value: davrujzufqqyuncu
+      - key: SMTP_FROM
+        value: muruganandhamm7639@gmail.com
+      - key: FRONTEND_URL
+        value: https://code-hunt-cs.vercel.app
 
   # Cron job to keep the backend service warm (prevents free tier from spinning down)
   - type: cron
     name: code-hunt-uptime-ping
     runtime: node
     buildCommand: npm install
-    startCommand: node -e "setInterval(() => { require('https').get('https://code-hunt-backend-XXXX.onrender.com/api/health', r => console.log('ping')); }, 300000);"
+    startCommand: node -e "setInterval(() => { require('https').get('https://code-hunt-9gxh.onrender.com/api/health', r => console.log('ping')); }, 300000);"
     schedule: "0 * * * *"
     envVars:
       - key: NODE_ENV
