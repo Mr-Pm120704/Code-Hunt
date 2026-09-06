@@ -89,6 +89,10 @@ export default function AdminContestForm({ contest, problems, onClose, onSaved }
               value={formData.title} 
               onChange={e => setFormData({ ...formData, title: e.target.value })}
               placeholder="e.g. Weekly Coding Contest #1"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
             />
           </div>
 
@@ -99,6 +103,10 @@ export default function AdminContestForm({ contest, problems, onClose, onSaved }
               value={formData.description} 
               onChange={e => setFormData({ ...formData, description: e.target.value })}
               placeholder="Rules, instructions, etc."
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
             />
           </div>
 

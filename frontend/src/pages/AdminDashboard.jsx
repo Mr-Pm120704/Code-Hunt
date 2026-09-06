@@ -30,6 +30,7 @@ export default function AdminDashboard() {
   const [problemYearFilter, setProblemYearFilter] = useState('All');
   const [studentYearFilter, setStudentYearFilter] = useState('All');
   const [studentClassFilter, setStudentClassFilter] = useState('All');
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const [leaderboardYear, setLeaderboardYear] = useState('1st Year');
   const [overallLeaderboard, setOverallLeaderboard] = useState([]);
   const [leaderboardTotalMarks, setLeaderboardTotalMarks] = useState(0);
@@ -352,6 +353,17 @@ export default function AdminDashboard() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
               <h2 className="text-sm sm:text-base md:text-lg font-semibold text-foreground">Registered Students</h2>
               <div className="flex items-center gap-2 w-full sm:w-auto">
+                <input
+                  type="text"
+                  value={studentSearchQuery}
+                  onChange={(e) => setStudentSearchQuery(e.target.value)}
+                  placeholder="Search by name or email..."
+                  className="lc-input bg-input border-border text-foreground text-xs sm:text-sm !py-1.5 sm:!py-2 flex-1 sm:flex-none sm:w-48"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck="false"
+                />
                 <select
                   value={studentYearFilter}
                   onChange={(e) => setStudentYearFilter(e.target.value)}
@@ -369,7 +381,7 @@ export default function AdminDashboard() {
                 >
                   <option value="All">All Classes</option>
                   <option value="B.SC AIML">B.SC AIML</option>
-                  <option value="BCA">BCA</option>
+                  <option value="B.SC BCA">B.SC BCA</option>
                   <option value="B.SC CS">B.SC CS</option>
                 </select>
                 <button
@@ -382,6 +394,11 @@ export default function AdminDashboard() {
             </div>
             <div className="space-y-2 sm:space-y-3">
               {students
+                .filter((s) => {
+                  if (!studentSearchQuery) return true;
+                  const q = studentSearchQuery.toLowerCase();
+                  return s.name?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q);
+                })
                 .filter((s) => studentYearFilter === 'All' || s.year === studentYearFilter)
                 .filter((s) => studentClassFilter === 'All' || s.class === studentClassFilter)
                 .map((s) => (

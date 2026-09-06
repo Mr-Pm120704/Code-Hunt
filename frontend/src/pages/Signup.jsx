@@ -54,6 +54,10 @@ export default function Signup() {
               className="w-full lc-input bg-input border-border text-foreground focus:border-brand text-sm"
               required
               placeholder="John Doe"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
             />
           </div>
 
@@ -66,6 +70,10 @@ export default function Signup() {
               className="w-full lc-input bg-input border-border text-foreground focus:border-brand text-sm"
               required
               placeholder="john@example.com"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
             />
           </div>
 
@@ -79,6 +87,10 @@ export default function Signup() {
               required
               placeholder="••••••••"
               minLength={6}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
             />
           </div>
 

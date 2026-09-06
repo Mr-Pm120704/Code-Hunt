@@ -736,10 +736,10 @@ async function main() {
   const students = [
     { email: 'student@codehunt.com', name: 'Demo Student', year: '2nd Year', class: 'B.SC CS' },
     { email: 'ariyan@codehunt.com', name: 'Ariyan', year: '1st Year', class: 'B.SC AIML' },
-    { email: 'priya@codehunt.com', name: 'Priya', year: '1st Year', class: 'BCA' },
+    { email: 'priya@codehunt.com', name: 'Priya', year: '1st Year', class: 'B.SC BCA' },
     { email: 'karthik@codehunt.com', name: 'Karthik', year: '2nd Year', class: 'B.SC AIML' },
     { email: 'meena@codehunt.com', name: 'Meena', year: '3rd Year', class: 'B.SC CS' },
-    { email: 'ravi@codehunt.com', name: 'Ravi', year: '3rd Year', class: 'BCA' },
+    { email: 'ravi@codehunt.com', name: 'Ravi', year: '3rd Year', class: 'B.SC BCA' },
   ];
 
   for (const s of students) {

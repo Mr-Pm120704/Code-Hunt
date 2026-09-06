@@ -117,6 +117,10 @@ export default function ForgotPassword() {
                 className="w-full lc-input bg-input border-border text-foreground focus:border-brand text-sm"
                 required
                 placeholder="your@email.com"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
               />
             </div>
             <button
@@ -139,6 +143,11 @@ export default function ForgotPassword() {
                 required
                 placeholder="000000"
                 maxLength={6}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
+                inputMode="numeric"
               />
             </div>
             <div>
@@ -151,6 +160,10 @@ export default function ForgotPassword() {
                 required
                 placeholder="••••••••"
                 minLength={6}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
               />
             </div>
             <button

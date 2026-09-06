@@ -116,6 +116,10 @@ export default function WebcamControl() {
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search by name or email..."
           className="flex-1 lc-input bg-input border-border text-foreground focus:border-brand text-sm"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck="false"
         />
         <select
           value={filterYear}

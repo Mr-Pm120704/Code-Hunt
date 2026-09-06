@@ -91,6 +91,7 @@ export default function CodingChallenge() {
         if (problem.isSolved && problem.lastSolvedCode) {
           setCode(problem.lastSolvedCode);
           setIsSolved(true);
+          setViewMode('view');
         } else {
           setCode(problem.starterCode || '');
         }
@@ -109,6 +110,41 @@ export default function CodingChallenge() {
   }, [id, navigate, addToast]);
 
   useEffect(() => {
+    if (!hasStarted || isDisqualified || submitted) return;
+
+    let wasFullscreen = !!document.fullscreenElement;
+
+    const handleFullscreenChange = () => {
+      const isNowFullscreen = !!document.fullscreenElement;
+      if (wasFullscreen && !isNowFullscreen) {
+        addToast('Fullscreen exited. The exam requires fullscreen mode.', 'warn');
+        api.post('/logs', { problemId: id }).catch(() => {});
+        setDistractionCount((prev) => prev + 1);
+        // Re-enter fullscreen after a short delay
+        setTimeout(() => {
+          if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+          }
+        }, 500);
+      }
+      wasFullscreen = isNowFullscreen;
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, [hasStarted, isDisqualified, submitted, id, addToast]);
+
+  const autoSubmitOnDisqualify = useCallback(async () => {
+    if (submitted) return;
+    try {
+      const currentCode = codeRef.current;
+      await api.post('/submit', { code: currentCode, problemId: id, distractionCount, language });
+    } catch (_) {
+      // Best-effort: continue to redirect even if submit fails
+    }
+  }, [id, distractionCount, language, submitted]);
+
+  useEffect(() => {
     if (!hasStarted || submitted) return;
 
     const handleHidden = () => {
@@ -122,12 +158,14 @@ export default function CodingChallenge() {
           addToast('You left the exam window. You may rejoin once.');
         } else {
           setIsDisqualified(true);
-          addToast('Multiple window switches detected - session terminated.', 'error');
-          setTimeout(() => {
-            alert('SECURITY VIOLATION: Multiple tab/window switches detected. Your session has been terminated.');
-            localStorage.clear();
-            window.location.href = '/login';
-          }, 800);
+          addToast('Multiple window switches detected - auto-submitting & terminating.', 'error');
+          autoSubmitOnDisqualify().finally(() => {
+            setTimeout(() => {
+              alert('SECURITY VIOLATION: Multiple tab/window switches detected. Your session has been terminated and your code has been auto-submitted.');
+              localStorage.clear();
+              window.location.href = '/login';
+            }, 1200);
+          });
         }
         return next;
       });
@@ -147,14 +185,20 @@ export default function CodingChallenge() {
       handleHidden();
     };
 
+    const handlePageHide = () => {
+      handleHidden();
+    };
+
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('blur', handleBlur);
+    window.addEventListener('pagehide', handlePageHide);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('pagehide', handlePageHide);
     };
-  }, [hasStarted, id, isDisqualified, submitted, overlayVisible, addToast]);
+  }, [hasStarted, id, isDisqualified, submitted, overlayVisible, addToast, autoSubmitOnDisqualify]);
 
   const startChallenge = () => {
     if (document.documentElement.requestFullscreen) {

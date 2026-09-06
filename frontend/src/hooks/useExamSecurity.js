@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 function isMacPlatform() {
   if (typeof navigator === 'undefined') return false;
@@ -21,13 +21,16 @@ function isBlockedShortcut(e) {
   const mod = mac ? e.metaKey : e.ctrlKey;
 
   if (key === 'f12') return true;
-  if (e.ctrlKey && e.shiftKey && ['i', 'j'].includes(key)) return true;
+  if (e.ctrlKey && e.shiftKey && ['i', 'j', 'delete'].includes(key)) return true;
   if (mac && e.metaKey && e.altKey && key === 'i') return true;
 
   return mod && ['c', 'v', 'x', 'z', 'y', 'a', 'p', 's', 't', 'n', 'w', 'u'].includes(key);
 }
 
 export default function useExamSecurity({ enabled, onViolation }) {
+  const longPressTimer = useRef(null);
+  const touchStartPos = useRef(null);
+
   useEffect(() => {
     if (!enabled || typeof document === 'undefined') return undefined;
 
@@ -90,8 +93,38 @@ export default function useExamSecurity({ enabled, onViolation }) {
       report('selectstart');
     };
 
-    const onTouchStart = () => {
-      // Keeps long-press menus from appearing on mobile when combined with user-select/touch-callout CSS.
+    // Mobile long-press prevention: track touch start position and time,
+    // cancel if held >500px movement or >500ms without movement
+    const LONG_PRESS_MS = 500;
+    const MOVE_THRESHOLD_PX = 10;
+
+    const onTouchStart = (e) => {
+      if (e.touches.length > 1) return;
+      const touch = e.touches[0];
+      touchStartPos.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+
+      longPressTimer.current = setTimeout(() => {
+        report('longpress');
+      }, LONG_PRESS_MS);
+    };
+
+    const onTouchMove = (e) => {
+      if (!touchStartPos.current || !longPressTimer.current) return;
+      const touch = e.touches[0];
+      const dx = Math.abs(touch.clientX - touchStartPos.current.x);
+      const dy = Math.abs(touch.clientY - touchStartPos.current.y);
+      if (dx > MOVE_THRESHOLD_PX || dy > MOVE_THRESHOLD_PX) {
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
+      }
+    };
+
+    const onTouchEnd = () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
+      }
+      touchStartPos.current = null;
     };
 
     document.addEventListener('keydown', blockKeyboard, true);
@@ -104,6 +137,9 @@ export default function useExamSecurity({ enabled, onViolation }) {
     document.addEventListener('contextmenu', blockContextMenu, true);
     document.addEventListener('selectstart', blockSelection, true);
     document.addEventListener('touchstart', onTouchStart, { capture: true, passive: true });
+    document.addEventListener('touchmove', onTouchMove, { capture: true, passive: true });
+    document.addEventListener('touchend', onTouchEnd, { capture: true, passive: true });
+    document.addEventListener('touchcancel', onTouchEnd, { capture: true, passive: true });
 
     return () => {
       root.classList.remove('exam-secure');
@@ -119,6 +155,13 @@ export default function useExamSecurity({ enabled, onViolation }) {
       document.removeEventListener('contextmenu', blockContextMenu, true);
       document.removeEventListener('selectstart', blockSelection, true);
       document.removeEventListener('touchstart', onTouchStart, true);
+      document.removeEventListener('touchmove', onTouchMove, true);
+      document.removeEventListener('touchend', onTouchEnd, true);
+      document.removeEventListener('touchcancel', onTouchEnd, true);
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
+      }
     };
   }, [enabled, onViolation]);
 }

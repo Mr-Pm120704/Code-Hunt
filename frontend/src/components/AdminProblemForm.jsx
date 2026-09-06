@@ -166,6 +166,10 @@ export default function AdminProblemForm({ problem, onClose, onSaved, year, onCh
                 value={formData.title} 
                 onChange={e => setFormData({ ...formData, title: e.target.value })}
                 placeholder="e.g. FizzBuzz"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
               />
             </div>
             <div>
@@ -205,6 +209,10 @@ export default function AdminProblemForm({ problem, onClose, onSaved, year, onCh
                 value={formData.functionName} 
                 onChange={e => setFormData({ ...formData, functionName: e.target.value })}
                 placeholder="e.g. Main"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
               />
               <p className="text-[10px] text-[var(--text-muted)] mt-1">The student's code must define this public class (usually Main).</p>
             </div>
@@ -230,6 +238,10 @@ export default function AdminProblemForm({ problem, onClose, onSaved, year, onCh
               value={formData.starterCode} 
               onChange={e => setFormData({ ...formData, starterCode: e.target.value })}
               placeholder="import java.util.*;&#10;public class Main { ... }"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
             />
           </div>
 
@@ -241,6 +253,10 @@ export default function AdminProblemForm({ problem, onClose, onSaved, year, onCh
               value={formData.description} 
               onChange={e => setFormData({ ...formData, description: e.target.value })}
               placeholder="Describe the challenge..."
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
             />
           </div>
 
@@ -280,6 +296,10 @@ export default function AdminProblemForm({ problem, onClose, onSaved, year, onCh
                         placeholder="e.g. 5\n1 2 3" 
                         value={tc.input} 
                         onChange={e => updateTestCase(idx, 'input', e.target.value)}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck="false"
                       />
                     </div>
                     <div>
@@ -290,6 +310,10 @@ export default function AdminProblemForm({ problem, onClose, onSaved, year, onCh
                         placeholder="e.g. 15" 
                         value={tc.output} 
                         onChange={e => updateTestCase(idx, 'output', e.target.value)}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck="false"
                       />
                     </div>
                   </div>

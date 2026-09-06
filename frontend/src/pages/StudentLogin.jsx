@@ -56,6 +56,10 @@ export default function StudentLogin() {
               className="w-full lc-input bg-input border-border text-foreground focus:border-brand text-sm"
               required
               placeholder="Enter your email"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
             />
           </div>
 
@@ -71,6 +75,10 @@ export default function StudentLogin() {
               className="w-full lc-input bg-input border-border text-foreground focus:border-brand text-sm"
               required
               placeholder="••••••••"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
             />
           </div>
 

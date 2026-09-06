@@ -58,6 +58,9 @@ export default function AdminLogin() {
               type="email"
               name="admin-email"
               autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full lc-input bg-input border-border text-foreground focus:border-brand text-sm"
@@ -72,6 +75,9 @@ export default function AdminLogin() {
               type="password"
               name="admin-password"
               autoComplete="new-password"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full lc-input bg-input border-border text-foreground focus:border-brand text-sm"
