@@ -249,6 +249,59 @@ export default function useExamSecurity({ enabled, onViolation }) {
       }, 500);
     };
 
+    // ── Browser Back/Forward Navigation Blocking ───────────────────────
+    // Pushes a dummy state on exam start. When user clicks back/forward,
+    // the popstate event fires and we immediately push the state back,
+    // effectively blocking navigation while reporting the violation.
+    // This prevents students from navigating to another page and using
+    // browser back to return and paste content.
+    const pushHistoryState = () => {
+      try {
+        window.history.pushState({ examSecure: true, ts: Date.now() }, '', window.location.href);
+      } catch (_) {}
+    };
+
+    const onPopState = (e) => {
+      // Push state back immediately to block navigation
+      pushHistoryState();
+      report('navigation:backforward');
+    };
+
+    // Push initial state when exam starts
+    pushHistoryState();
+
+    // ── Mobile Clipboard Bar Blocking ──────────────────────────────────
+    // Mobile keyboards (Gboard, SwiftKey) have a clipboard suggestion bar
+    // that can bypass our paste blocking. We intercept the 'input' event
+    // on all text fields to detect and cancel paste-like insertions.
+    // Also clear clipboard periodically to prevent clipboard-based cheating.
+    const blockMobileClipboardPaste = (e) => {
+      const inputType = String(e.inputType || '').toLowerCase();
+      // Detect paste from mobile keyboard clipboard bar
+      if (inputType === 'insertfromclip' || inputType === 'insertFromPaste') {
+        e.preventDefault();
+        e.stopPropagation();
+        report('mobile:clipboard');
+      }
+    };
+
+    // Clear clipboard when exam is active (best-effort, may not work on all browsers)
+    const clearClipboard = async () => {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText('');
+        }
+      } catch (_) {}
+    };
+
+    // Clear clipboard every 5 seconds while exam is active
+    const clipboardInterval = setInterval(clearClipboard, 5000);
+
+    // Also clear clipboard on any focus (user switching back to tab)
+    const clearClipboardOnFocus = () => {
+      clearClipboard();
+    };
+
     // ── Register All Event Listeners ───────────────────────────────────
     document.addEventListener('keydown', blockKeyboard, true);
     document.addEventListener('keyup', blockKeyboard, true);
@@ -256,6 +309,7 @@ export default function useExamSecurity({ enabled, onViolation }) {
       document.addEventListener(eventName, blockClipboard, true);
     });
     document.addEventListener('beforeinput', blockBeforeInput, true);
+    document.addEventListener('input', blockMobileClipboardPaste, true);
     document.addEventListener('drop', blockDrop, true);
     document.addEventListener('contextmenu', blockContextMenu, true);
     document.addEventListener('selectstart', blockSelection, true);
@@ -264,6 +318,8 @@ export default function useExamSecurity({ enabled, onViolation }) {
     document.addEventListener('touchend', onTouchEnd, { capture: true, passive: true });
     document.addEventListener('touchcancel', onTouchEnd, { capture: true, passive: true });
     window.addEventListener('resize', onResize);
+    window.addEventListener('popstate', onPopState);
+    window.addEventListener('focus', clearClipboardOnFocus);
 
     // ── Cleanup ────────────────────────────────────────────────────────
     return () => {
@@ -276,6 +332,7 @@ export default function useExamSecurity({ enabled, onViolation }) {
         document.removeEventListener(eventName, blockClipboard, true);
       });
       document.removeEventListener('beforeinput', blockBeforeInput, true);
+      document.removeEventListener('input', blockMobileClipboardPaste, true);
       document.removeEventListener('drop', blockDrop, true);
       document.removeEventListener('contextmenu', blockContextMenu, true);
       document.removeEventListener('selectstart', blockSelection, true);
@@ -284,6 +341,8 @@ export default function useExamSecurity({ enabled, onViolation }) {
       document.removeEventListener('touchend', onTouchEnd, true);
       document.removeEventListener('touchcancel', onTouchEnd, true);
       window.removeEventListener('resize', onResize);
+      window.removeEventListener('popstate', onPopState);
+      window.removeEventListener('focus', clearClipboardOnFocus);
       if (longPressTimer.current) {
         clearTimeout(longPressTimer.current);
         longPressTimer.current = null;
@@ -295,6 +354,9 @@ export default function useExamSecurity({ enabled, onViolation }) {
       if (resizeTimeout) {
         clearTimeout(resizeTimeout);
         resizeTimeout = null;
+      }
+      if (clipboardInterval) {
+        clearInterval(clipboardInterval);
       }
     };
   }, [enabled, onViolation]);

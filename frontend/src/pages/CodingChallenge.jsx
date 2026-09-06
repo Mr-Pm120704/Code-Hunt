@@ -69,6 +69,8 @@ export default function CodingChallenge() {
       'devtools:debugger': 'Developer Tools detected via debugger. This is a security violation.',
       'devtools:getter': 'Developer Tools detected. This is a security violation.',
       'resize:suspect': 'Suspicious window resize detected.',
+      'navigation:backforward': 'Browser back/forward navigation is disabled during the exam.',
+      'mobile:clipboard': 'Clipboard paste is disabled during the exam.',
     };
 
     const label = labels[reason] || 'Forbidden shortcut or action blocked during the exam.';
