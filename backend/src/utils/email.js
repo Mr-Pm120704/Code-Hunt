@@ -1,19 +1,20 @@
-const dns = require('dns');
 const nodemailer = require('nodemailer');
+
+const smtpPort = parseInt(process.env.SMTP_PORT || '465', 10);
 
 const smtpTransporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587', 10),
-  secure: String(process.env.SMTP_PORT || '587') === '465',
-  connectionTimeout: 15000,
-  greetingTimeout: 15000,
-  socketTimeout: 15000,
-  lookup(hostname, options, callback) {
-    return dns.lookup(hostname, { ...options, family: 4 }, callback);
-  },
+  port: smtpPort,
+  secure: smtpPort === 465,
+  connectionTimeout: 30000,
+  greetingTimeout: 30000,
+  socketTimeout: 30000,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
+  },
+  tls: {
+    rejectUnauthorized: false,
   },
 });
 
