@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/client';
 
@@ -10,7 +10,22 @@ export default function ForgotPassword() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (step !== 2 || resendCooldown <= 0) return undefined;
+
+    const timer = setInterval(() => {
+      setResendCooldown((current) => Math.max(0, current - 1));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [step, resendCooldown]);
+
+  const startResendCooldown = () => {
+    setResendCooldown(120);
+  };
 
   const handleRequestCode = async (e) => {
     e.preventDefault();
@@ -21,8 +36,29 @@ export default function ForgotPassword() {
       const { data } = await api.post('/auth/forgot-password', { email });
       setMessage(data.message || 'Reset code sent. Check your email.');
       setStep(2);
+      setCode('');
+      setNewPassword('');
+      startResendCooldown();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to send reset code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setLoading(true);
+    setError('');
+    setMessage('');
+
+    try {
+      const { data } = await api.post('/auth/forgot-password', { email });
+      setMessage(data.message || 'A new reset code has been sent.');
+      setCode('');
+      setNewPassword('');
+      startResendCooldown();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to resend reset code');
     } finally {
       setLoading(false);
     }
@@ -121,8 +157,16 @@ export default function ForgotPassword() {
               type="submit"
               disabled={loading}
               className="w-full lc-btn-primary py-3 sm:py-3.5 text-base sm:text-lg shadow-[0_0_20px_rgba(255,161,22,0.2)] disabled:opacity-50"
+              >
+                {loading ? 'Resetting...' : 'Reset Password'}
+              </button>
+            <button
+              type="button"
+              onClick={handleResendCode}
+              disabled={loading || resendCooldown > 0}
+              className="w-full text-center text-xs sm:text-sm text-brand hover:underline font-medium transition-colors disabled:opacity-50 disabled:no-underline"
             >
-              {loading ? 'Resetting...' : 'Reset Password'}
+              {resendCooldown > 0 ? `Resend code in ${Math.ceil(resendCooldown / 60)}:${String(resendCooldown % 60).padStart(2, '0')}` : 'Resend code'}
             </button>
             <button
               type="button"
