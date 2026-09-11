@@ -104,6 +104,7 @@ export default function useExamSecurity({ enabled, onViolation }) {
       const shouldBlock =
         inputType.includes('paste') ||
         inputType.includes('drop') ||
+        inputType.includes('insertfromdrop') ||
         inputType === 'historyundo' ||
         inputType === 'historyredo';
 
@@ -142,6 +143,7 @@ export default function useExamSecurity({ enabled, onViolation }) {
     const MOVE_THRESHOLD_PX = 10;
 
     const onTouchStart = (e) => {
+      clearClipboard();
       if (e.touches.length > 1) return;
       const touch = e.touches[0];
       touchStartPos.current = { x: touch.clientX, y: touch.clientY, time: Date.now() };
@@ -294,8 +296,8 @@ export default function useExamSecurity({ enabled, onViolation }) {
       } catch (_) {}
     };
 
-    // Clear clipboard every 5 seconds while exam is active
-    const clipboardInterval = setInterval(clearClipboard, 5000);
+    // Clear clipboard every 2 seconds while exam is active
+    const clipboardInterval = setInterval(clearClipboard, 2000);
 
     // Also clear clipboard on any focus (user switching back to tab)
     const clearClipboardOnFocus = () => {

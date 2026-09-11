@@ -77,6 +77,17 @@ export default function CodeEditor({ value, onChange, language = 'javascript', r
   }, []);
 
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const blockPaste = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    container.addEventListener('paste', blockPaste, true);
+    return () => container.removeEventListener('paste', blockPaste, true);
+  }, []);
+
+  useEffect(() => {
     const handleResize = () => {
       if (editorRef.current) {
         setTimeout(() => editorRef.current.layout(), 100);
@@ -87,7 +98,7 @@ export default function CodeEditor({ value, onChange, language = 'javascript', r
   }, []);
 
   return (
-    <div ref={containerRef} className="code-editor-root">
+    <div ref={containerRef} className="code-editor-root" autoComplete="off">
       <div className="code-editor-titlebar">
         <div className="code-editor-dots">
           <span className="dot dot-red"></span>
@@ -131,6 +142,7 @@ export default function CodeEditor({ value, onChange, language = 'javascript', r
             smoothScrolling: true,
             mouseWheelZoom: isMobile,
             contextmenu: false,
+            pasteOnCtrlV: false,
             quickSuggestions: false,
             suggestOnTriggerCharacters: false,
             wordBasedSuggestions: false,
