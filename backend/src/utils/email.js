@@ -1,37 +1,35 @@
-const nodemailer = require('nodemailer');
+const axios = require('axios');
 
-const smtpPort = parseInt(process.env.SMTP_PORT || '465', 10);
-
-const smtpTransporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: smtpPort,
-  secure: smtpPort === 465,
-  connectionTimeout: 30000,
-  greetingTimeout: 30000,
-  socketTimeout: 30000,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-  tls: {
-    rejectUnauthorized: false,
-  },
-});
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
+const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || process.env.SMTP_USER || 'muruganandhamm7639@gmail.com';
+const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || 'Code Hunt';
 
 async function sendEmail({ to, subject, html }) {
-  const fromEmail = process.env.SMTP_USER || process.env.SMTP_FROM;
-  if (!fromEmail) {
-    throw new Error('No email provider configured');
+  if (!BREVO_API_KEY) {
+    throw new Error('BREVO_API_KEY not configured');
   }
 
-  const info = await smtpTransporter.sendMail({
-    from: `"Code Hunt" <${fromEmail}>`,
-    to,
+  const payload = {
+    sender: {
+      email: BREVO_SENDER_EMAIL,
+      name: BREVO_SENDER_NAME,
+    },
+    to: [{ email: to }],
     subject,
-    html,
+    htmlContent: html,
+  };
+
+  const response = await axios.post(BREVO_API_URL, payload, {
+    headers: {
+      'api-key': BREVO_API_KEY,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    timeout: 30000,
   });
 
-  return { provider: 'smtp', result: info };
+  return { provider: 'brevo', result: response.data };
 }
 
-module.exports = { sendEmail, smtpTransporter };
+module.exports = { sendEmail };

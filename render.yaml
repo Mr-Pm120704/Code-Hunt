@@ -12,16 +12,12 @@ services:
         value: codehunt-secret-2024
       - key: NODE_ENV
         value: production
-      - key: SMTP_HOST
-        value: smtp.gmail.com
-      - key: SMTP_PORT
-        value: "465"
-      - key: SMTP_USER
+      - key: BREVO_API_KEY
+        value: ""
+      - key: BREVO_SENDER_EMAIL
         value: muruganandhamm7639@gmail.com
-      - key: SMTP_PASS
-        value: davrujzufqqyuncu
-      - key: SMTP_FROM
-        value: muruganandhamm7639@gmail.com
+      - key: BREVO_SENDER_NAME
+        value: Code Hunt
       - key: FRONTEND_URL
         value: https://code-hunt-cs.vercel.app
 
