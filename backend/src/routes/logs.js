@@ -3,6 +3,19 @@ const router = express.Router();
 const prisma = require('../utils/prisma');
 const { authenticateToken } = require('../middleware/auth');
 
+async function upsertWithRetry(data, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await prisma.distractionSummary.upsert(data);
+    } catch (err) {
+      if (err.code === 'P2034' && i < retries - 1) {
+        await new Promise((r) => setTimeout(r, 50 * (i + 1)));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
 
 // POST /api/logs — upsert distraction summary (lightweight, one row per student+problem)
 router.post('/', authenticateToken, async (req, res) => {
@@ -14,8 +27,7 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'problemId is required' });
     }
 
-    // Upsert: create or increment the distraction count for this student+problem session
-    const summary = await prisma.distractionSummary.upsert({
+    const summary = await upsertWithRetry({
       where: { studentId_problemId: { studentId, problemId } },
       update: {
         hadDistraction: true,
