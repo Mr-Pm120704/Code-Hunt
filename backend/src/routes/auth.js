@@ -101,7 +101,7 @@ router.post('/forgot-password', async (req, res) => {
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      return res.json({ message: 'If an account exists with this email, a reset code has been sent.' });
+      return res.status(404).json({ error: 'No account found with this email. Please check your email or contact admin.' });
     }
 
     const code = String(crypto.randomInt(100000, 999999));
