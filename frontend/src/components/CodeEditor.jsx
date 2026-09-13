@@ -55,6 +55,23 @@ export default function CodeEditor({ value, onChange, language = 'javascript', r
     });
     monaco.editor.setTheme('codehunt-light');
 
+    // Block paste at Monaco editor level — catches Samsung/Gboard/SwiftKey clipboard bar
+    // If content grows by more than 5 chars in one change, revert (keyboard clipboard injection)
+    let previousContent = editor.getValue();
+    let reverting = false;
+    editor.onDidChangeModelContent(() => {
+      if (reverting) return;
+      const currentContent = editor.getValue();
+      const diff = currentContent.length - previousContent.length;
+      if (diff > 5) {
+        reverting = true;
+        editor.setValue(previousContent);
+        reverting = false;
+        return;
+      }
+      previousContent = currentContent;
+    });
+
     editor.focus();
     requestAnimationFrame(() => {
       editor.layout();

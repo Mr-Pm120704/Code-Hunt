@@ -104,9 +104,19 @@ export default function useExamSecurity({ enabled, onViolation }) {
       const shouldBlock =
         inputType.includes('paste') ||
         inputType.includes('drop') ||
+        inputType.includes('insertfromclip') ||
+        inputType.includes('insertfrompaste') ||
         inputType.includes('insertfromdrop') ||
         inputType === 'historyundo' ||
         inputType === 'historyredo';
+
+      // Block insertText with long content (Samsung/Gboard clipboard bar)
+      if (inputType === 'inserttext' && e.data && (e.data.length > 3 || e.data.includes('\n'))) {
+        e.preventDefault();
+        e.stopPropagation();
+        report(`beforeinput:${inputType}:blocked`);
+        return;
+      }
 
       if (!shouldBlock) return;
 
@@ -273,19 +283,35 @@ export default function useExamSecurity({ enabled, onViolation }) {
     pushHistoryState();
 
     // ── Mobile Clipboard Bar Blocking ──────────────────────────────────
-    // Mobile keyboards (Gboard, SwiftKey) have a clipboard suggestion bar
-    // that can bypass our paste blocking. We intercept the 'input' event
-    // on all text fields to detect and cancel paste-like insertions.
-    // Also clear clipboard periodically to prevent clipboard-based cheating.
+    // Mobile keyboards (Gboard, SwiftKey, Samsung) have a clipboard suggestion bar
+    // that can bypass our paste blocking. Samsung keyboard fires 'insertText'
+    // instead of 'insertFromClip'. We block at multiple levels:
+    // 1. inputType detection (insertFromClip, insertFromPaste)
+    // 2. beforeinput with long/newline text detection
+    // 3. document.execCommand override
     const blockMobileClipboardPaste = (e) => {
       const inputType = String(e.inputType || '').toLowerCase();
-      // Detect paste from mobile keyboard clipboard bar
-      if (inputType === 'insertfromclip' || inputType === 'insertFromPaste') {
+      if (inputType === 'insertfromclip' || inputType === 'insertfrompaste') {
         e.preventDefault();
         e.stopPropagation();
         report('mobile:clipboard');
       }
     };
+
+    // Block Samsung Keyboard clipboard: intercept document.execCommand
+    const originalExecCommand = document.execCommand?.bind(document);
+    if (document.execCommand) {
+      document.execCommand = function (cmd, ...args) {
+        if (cmd === 'insertText' || cmd === 'insertHTML') {
+          const text = String(args[2] || '');
+          if (text.length > 3 || text.includes('\n')) {
+            report('mobile:samsung-clipboard');
+            return false;
+          }
+        }
+        return originalExecCommand ? originalExecCommand(cmd, ...args) : false;
+      };
+    }
 
     // Clear clipboard when exam is active (best-effort, may not work on all browsers)
     const clearClipboard = async () => {
@@ -296,12 +322,37 @@ export default function useExamSecurity({ enabled, onViolation }) {
       } catch (_) {}
     };
 
-    // Clear clipboard every 2 seconds while exam is active
-    const clipboardInterval = setInterval(clearClipboard, 2000);
+    // Override clipboard.writeText to block students from copying
+    const originalWriteText = navigator.clipboard?.writeText?.bind(navigator.clipboard);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText = async () => {
+        report('clipboard:write');
+        return undefined;
+      };
+    }
+
+    // Override clipboard.write to block students from copying
+    const originalWrite = navigator.clipboard?.write?.bind(navigator.clipboard);
+    if (navigator.clipboard) {
+      navigator.clipboard.write = async () => {
+        report('clipboard:write');
+        return undefined;
+      };
+    }
+
+    // Clear clipboard every 1 second while exam is active
+    const clipboardInterval = setInterval(clearClipboard, 1000);
 
     // Also clear clipboard on any focus (user switching back to tab)
     const clearClipboardOnFocus = () => {
       clearClipboard();
+    };
+
+    // Clear clipboard on visibility change (tab becomes visible again)
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        clearClipboard();
+      }
     };
 
     // ── Register All Event Listeners ───────────────────────────────────
@@ -322,6 +373,7 @@ export default function useExamSecurity({ enabled, onViolation }) {
     window.addEventListener('resize', onResize);
     window.addEventListener('popstate', onPopState);
     window.addEventListener('focus', clearClipboardOnFocus);
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     // ── Cleanup ────────────────────────────────────────────────────────
     return () => {
@@ -345,6 +397,7 @@ export default function useExamSecurity({ enabled, onViolation }) {
       window.removeEventListener('resize', onResize);
       window.removeEventListener('popstate', onPopState);
       window.removeEventListener('focus', clearClipboardOnFocus);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
       if (longPressTimer.current) {
         clearTimeout(longPressTimer.current);
         longPressTimer.current = null;
@@ -359,6 +412,15 @@ export default function useExamSecurity({ enabled, onViolation }) {
       }
       if (clipboardInterval) {
         clearInterval(clipboardInterval);
+      }
+      if (originalExecCommand && document.execCommand) {
+        document.execCommand = originalExecCommand;
+      }
+      if (originalWriteText && navigator.clipboard) {
+        navigator.clipboard.writeText = originalWriteText;
+      }
+      if (originalWrite && navigator.clipboard) {
+        navigator.clipboard.write = originalWrite;
       }
     };
   }, [enabled, onViolation]);
