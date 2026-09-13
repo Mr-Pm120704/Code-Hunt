@@ -24,15 +24,22 @@ function formatTime(minutes) {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
+function getISTHours() {
+  const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istTime = new Date(now.getTime() + istOffset);
+  return istTime.getUTCHours();
+}
+
 function getGreeting() {
-  const hour = new Date().getHours();
+  const hour = getISTHours();
   if (hour < 12) return 'Good Morning';
   if (hour < 17) return 'Good Afternoon';
   return 'Good Evening';
 }
 
 function getTimePeriod() {
-  const hour = new Date().getHours();
+  const hour = getISTHours();
   if (hour < 12) return 'morning';
   if (hour < 17) return 'afternoon';
   return 'evening';
@@ -63,7 +70,7 @@ async function sendReminderEmail(student, todayCount) {
             Solve <strong>${2 - todayCount} more problem${2 - todayCount !== 1 ? 's' : ''}</strong> today to meet your daily goal.
           </p>
           <div style="text-align: center; margin: 25px 0;">
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/student" 
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" 
                style="background: #f97316; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px;">
               Start Coding Now →
             </a>
@@ -91,9 +98,9 @@ async function checkAndSendReminders() {
   try {
     const today = new Date();
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const currentHour = today.getHours();
+    const currentHour = getISTHours();
 
-    // Determine which time period we're in
+    // Determine which time period we're in (IST)
     let timePeriod;
     if (currentHour < 12) timePeriod = 'morning';
     else if (currentHour < 17) timePeriod = 'afternoon';
@@ -131,7 +138,8 @@ async function checkAndSendReminders() {
       // Skip if already reminded in this exact time period today
       // Allow reminders in different time periods (morning + evening)
       if (student.lastReminderSent && isSameDay(student.lastReminderSent, today)) {
-        const lastSentHour = new Date(student.lastReminderSent).getHours();
+        const lastSentIST = new Date(new Date(student.lastReminderSent).getTime() + 5.5 * 60 * 60 * 1000);
+        const lastSentHour = lastSentIST.getUTCHours();
         let lastPeriod;
         if (lastSentHour < 12) lastPeriod = 'morning';
         else if (lastSentHour < 17) lastPeriod = 'afternoon';
@@ -162,37 +170,40 @@ async function checkAndSendReminders() {
   }
 }
 
-// Run daily at 8 PM (20:00) and also at 10 AM (10:00) for a second reminder
+// Run daily at 8 PM IST and 10 AM IST
 function startScheduler() {
   const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000;
 
-  // Schedule for 10:00 AM
-  const morningTarget = new Date(now);
-  morningTarget.setHours(10, 0, 0, 0);
-  if (morningTarget <= now) morningTarget.setDate(morningTarget.getDate() + 1);
+  // Schedule for 10:00 AM IST (= 4:30 AM UTC)
+  const morningTarget = new Date(now.getTime() + istOffset);
+  morningTarget.setUTCHours(10, 0, 0, 0);
+  const morningUTC = new Date(morningTarget.getTime() - istOffset);
+  if (morningUTC <= now) morningUTC.setDate(morningUTC.getDate() + 1);
 
-  // Schedule for 8:00 PM
-  const eveningTarget = new Date(now);
-  eveningTarget.setHours(20, 0, 0, 0);
-  if (eveningTarget <= now) eveningTarget.setDate(eveningTarget.getDate() + 1);
+  // Schedule for 8:00 PM IST (= 2:30 PM UTC)
+  const eveningTarget = new Date(now.getTime() + istOffset);
+  eveningTarget.setUTCHours(20, 0, 0, 0);
+  const eveningUTC = new Date(eveningTarget.getTime() - istOffset);
+  if (eveningUTC <= now) eveningUTC.setDate(eveningUTC.getDate() + 1);
 
-  const msUntilMorning = morningTarget.getTime() - now.getTime();
-  const msUntilEvening = eveningTarget.getTime() - now.getTime();
+  const msUntilMorning = morningUTC.getTime() - now.getTime();
+  const msUntilEvening = eveningUTC.getTime() - now.getTime();
 
   // Morning reminder
   setTimeout(() => {
-    console.log('[SCHEDULER] Running morning reminder check...');
+    console.log('[SCHEDULER] Running morning reminder check (10 AM IST)...');
     checkAndSendReminders();
     setInterval(checkAndSendReminders, 12 * 60 * 60 * 1000); // every 12 hours
   }, msUntilMorning);
 
   // Evening reminder (offset by 30 seconds from morning cycle to avoid collision)
   setTimeout(() => {
-    console.log('[SCHEDULER] Running evening reminder check...');
+    console.log('[SCHEDULER] Running evening reminder check (8 PM IST)...');
     checkAndSendReminders();
   }, msUntilEvening + 30000);
 
-  console.log(`[SCHEDULER] Reminders scheduled for ${morningTarget.toLocaleString()} (morning) and ${eveningTarget.toLocaleString()} (evening)`);
+  console.log(`[SCHEDULER] Reminders scheduled for ${morningUTC.toUTCString()} (10 AM IST) and ${eveningUTC.toUTCString()} (8 PM IST)`);
 }
 
 module.exports = { startScheduler, checkAndSendReminders };
