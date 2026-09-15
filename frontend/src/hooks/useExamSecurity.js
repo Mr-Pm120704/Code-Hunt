@@ -110,11 +110,25 @@ export default function useExamSecurity({ enabled, onViolation }) {
         inputType === 'historyundo' ||
         inputType === 'historyredo';
 
-      if (!shouldBlock) return;
+      if (shouldBlock) {
+        e.preventDefault();
+        e.stopPropagation();
+        report(`beforeinput:${inputType}`);
+        return;
+      }
 
-      e.preventDefault();
-      e.stopPropagation();
-      report(`beforeinput:${inputType}`);
+      // Smart Samsung/Gboard clipboard bar detection:
+      // Normal typing = single characters or short words. Clipboard paste = multi-line code.
+      // Only block when text contains newlines AND is more than just Enter key.
+      if (inputType === 'inserttext' && e.data) {
+        const text = e.data;
+        if (text.includes('\n') && text.length > 1) {
+          e.preventDefault();
+          e.stopPropagation();
+          report('mobile:clipboard:smart');
+          return;
+        }
+      }
     };
 
     // ── Drag-and-Drop Blocking ─────────────────────────────────────────
@@ -290,6 +304,22 @@ export default function useExamSecurity({ enabled, onViolation }) {
       }
     };
 
+    // Block Samsung Keyboard clipboard: intercept document.execCommand
+    // Only block multi-line paste (contains \n + length > 1), not normal typing or Enter
+    const originalExecCommand = document.execCommand?.bind(document);
+    if (document.execCommand) {
+      document.execCommand = function (cmd, ...args) {
+        if (cmd === 'insertText' || cmd === 'insertHTML') {
+          const text = String(args[2] || '');
+          if (text.includes('\n') && text.length > 1) {
+            report('mobile:samsung-clipboard');
+            return false;
+          }
+        }
+        return originalExecCommand ? originalExecCommand(cmd, ...args) : false;
+      };
+    }
+
     // Clear clipboard when exam is active (best-effort, may not work on all browsers)
     const clearClipboard = async () => {
       try {
@@ -389,6 +419,9 @@ export default function useExamSecurity({ enabled, onViolation }) {
       }
       if (clipboardInterval) {
         clearInterval(clipboardInterval);
+      }
+      if (originalExecCommand && document.execCommand) {
+        document.execCommand = originalExecCommand;
       }
       if (originalWriteText && navigator.clipboard) {
         navigator.clipboard.writeText = originalWriteText;
