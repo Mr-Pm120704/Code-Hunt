@@ -110,14 +110,6 @@ export default function useExamSecurity({ enabled, onViolation }) {
         inputType === 'historyundo' ||
         inputType === 'historyredo';
 
-      // Block insertText with long content (Samsung/Gboard clipboard bar)
-      if (inputType === 'inserttext' && e.data && (e.data.length > 3 || e.data.includes('\n'))) {
-        e.preventDefault();
-        e.stopPropagation();
-        report(`beforeinput:${inputType}:blocked`);
-        return;
-      }
-
       if (!shouldBlock) return;
 
       e.preventDefault();
@@ -298,21 +290,6 @@ export default function useExamSecurity({ enabled, onViolation }) {
       }
     };
 
-    // Block Samsung Keyboard clipboard: intercept document.execCommand
-    const originalExecCommand = document.execCommand?.bind(document);
-    if (document.execCommand) {
-      document.execCommand = function (cmd, ...args) {
-        if (cmd === 'insertText' || cmd === 'insertHTML') {
-          const text = String(args[2] || '');
-          if (text.length > 3 || text.includes('\n')) {
-            report('mobile:samsung-clipboard');
-            return false;
-          }
-        }
-        return originalExecCommand ? originalExecCommand(cmd, ...args) : false;
-      };
-    }
-
     // Clear clipboard when exam is active (best-effort, may not work on all browsers)
     const clearClipboard = async () => {
       try {
@@ -412,9 +389,6 @@ export default function useExamSecurity({ enabled, onViolation }) {
       }
       if (clipboardInterval) {
         clearInterval(clipboardInterval);
-      }
-      if (originalExecCommand && document.execCommand) {
-        document.execCommand = originalExecCommand;
       }
       if (originalWriteText && navigator.clipboard) {
         navigator.clipboard.writeText = originalWriteText;
