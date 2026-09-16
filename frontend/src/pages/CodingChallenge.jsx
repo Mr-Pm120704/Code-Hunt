@@ -39,6 +39,7 @@ export default function CodingChallenge() {
   const [viewMode, setViewMode] = useState('edit');
   const codeRef = useRef(code);
   const getCode = useCallback(() => codeRef.current, []);
+  const lastWarningRef = useRef(0);
 
   useEffect(() => { codeRef.current = code; }, [code]);
 
@@ -50,6 +51,11 @@ export default function CodingChallenge() {
 
   const handleSecurityViolation = useCallback((reason) => {
     if (!hasStarted || isDisqualified || submitted) return;
+
+    // Throttle: only show one warning every 3 seconds
+    const now = Date.now();
+    if (now - lastWarningRef.current < 3000) return;
+    lastWarningRef.current = now;
 
     const labels = {
       contextmenu: 'Right-click is disabled during the exam.',
